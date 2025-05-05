@@ -7,6 +7,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useInView } from 'react-intersection-observer';
+import ProductCard from '@/components/store/ProductCard';
 
 // Categories for filter chips
 const CATEGORIES = [
@@ -333,107 +334,21 @@ export default function StoreClient({ initialProducts }: StoreClientProps) {
               transition={{ duration: 0.3 }}
             >
               {filteredProducts.length > 0 ? (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 sm:gap-5">
                   {filteredProducts.map((product, index) => {
-                    // Determine if this product should be featured (taller)
-                    const isFeatured = product.featured || (index % 8 === 0 && index !== 0);
+                    // Limit featured products to avoid layout issues
+                    // Only make first product featured and certain products at specific intervals
+                    const isFeatured = (index === 0 || (index % 12 === 6)) && product.featured;
                     
                     return (
-                      <motion.div
+                      <ProductCard
                         key={product._id || product.id}
-                        className={`group relative ${isFeatured ? 'sm:col-span-2 sm:row-span-2' : ''}`}
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 0.4, delay: index * 0.05 }}
-                        whileHover={{ y: -5, transition: { duration: 0.2 } }}
-                      >
-                        <Link 
-                          href={product._type === 'product' 
-                            ? `/store/${product.slug.current}` 
-                            : `/store/${product.id}`}
-                          className="block h-full"
-                        >
-                          <div className="bg-dark/40 backdrop-blur-lg rounded-xl overflow-hidden border border-light/5 h-full flex flex-col">
-                            <div className={`relative ${isFeatured ? 'aspect-square' : 'aspect-[4/3]'} overflow-hidden`}>
-                              <Image 
-                                src={getProductImageUrl(product)}
-                                alt={product.title}
-                                fill
-                                sizes={isFeatured 
-                                  ? "(max-width: 640px) 100vw, (max-width: 1024px) 100vw, 50vw" 
-                                  : "(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"}
-                                className="object-cover transition-all duration-700 group-hover:scale-110"
-                              />
-                              
-                              {/* Gradient overlay */}
-                              <div className="absolute inset-0 bg-gradient-to-t from-dark/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                              
-                              {/* Product badges */}
-                              <div className="absolute top-3 left-3 flex flex-col gap-2">
-                                {product.new && (
-                                  <div className="bg-primary text-light text-xs font-bold py-1 px-2 rounded-md shadow-lg">
-                                    NEW
-                                  </div>
-                                )}
-                                {product.featured && (
-                                  <div className="bg-accent text-light text-xs font-bold py-1 px-2 rounded-md shadow-lg">
-                                    FEATURED
-                                  </div>
-                                )}
-                                {!product.inStock && (
-                                  <div className="bg-dark/80 text-light/90 text-xs font-medium py-1 px-2 rounded-md shadow-lg">
-                                    OUT OF STOCK
-                                  </div>
-                                )}
-                              </div>
-                              
-                              {/* Quick add button */}
-                              <div className="absolute right-3 bottom-3 transform translate-y-10 opacity-0 group-hover:translate-y-0 group-hover:opacity-100 transition-all duration-300">
-                                <button
-                                  onClick={(e) => handleAddToCart(product, e)}
-                                  disabled={!product.inStock || isLoading}
-                                  className={`p-3 rounded-full shadow-lg ${
-                                    !product.inStock 
-                                      ? 'bg-dark/70 text-light/50 cursor-not-allowed' 
-                                      : 'bg-primary hover:bg-primary/90 text-light'
-                                  } transition-colors`}
-                                  aria-label={`Add ${product.title} to cart`}
-                                >
-                                  {isLoading ? (
-                                    <svg className="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                                    </svg>
-                                  ) : (
-                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                                    </svg>
-                                  )}
-                                </button>
-                              </div>
-                            </div>
-                            
-                            <div className="p-4 flex-grow flex flex-col">
-                              <div className="flex-grow">
-                                <div className="text-xs text-light/60 uppercase tracking-wider mb-1">{product.category}</div>
-                                <h3 className="font-bold text-light group-hover:text-primary transition-colors duration-300 mb-1">
-                                  {product.title}
-                                </h3>
-                                {product.description && isFeatured && (
-                                  <p className="text-light/70 text-sm line-clamp-2 mt-2">{product.description}</p>
-                                )}
-                              </div>
-                              
-                              <div className="mt-3 flex justify-between items-center">
-                                <span className="text-xl font-bold text-light">${product.price.toFixed(2)}</span>
-                                <span className="text-xs text-light/60 uppercase">
-                                  {product.inStock ? 'In Stock' : 'Sold Out'}
-                                </span>
-                              </div>
-                            </div>
-                          </div>
-                        </Link>
-                      </motion.div>
+                        product={product}
+                        isFeatured={isFeatured}
+                        onAddToCart={handleAddToCart}
+                        isLoading={isLoading}
+                        index={index}
+                      />
                     );
                   })}
                 </div>
@@ -464,6 +379,22 @@ export default function StoreClient({ initialProducts }: StoreClientProps) {
               )}
             </motion.div>
           </AnimatePresence>
+          
+          {/* Pagination for future implementation */}
+          {filteredProducts.length > 0 && (
+            <div className="mt-12 flex justify-center">
+              <div className="inline-flex gap-2 bg-dark/30 backdrop-blur-md rounded-lg p-1">
+                <button className="w-9 h-9 flex items-center justify-center rounded-md bg-primary text-light">1</button>
+                <button className="w-9 h-9 flex items-center justify-center rounded-md hover:bg-dark/50 text-light/70 hover:text-light transition-colors">2</button>
+                <button className="w-9 h-9 flex items-center justify-center rounded-md hover:bg-dark/50 text-light/70 hover:text-light transition-colors">3</button>
+                <button className="w-9 h-9 flex items-center justify-center rounded-md hover:bg-dark/50 text-light/70 hover:text-light transition-colors">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       </motion.section>
     </div>
