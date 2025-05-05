@@ -3,16 +3,15 @@
 import { useState, useEffect } from 'react'
 import { getMusic } from '@/lib/sanity'
 import { fallbackMusic } from '@/lib/fallbackData'
-import { urlFor, getAudioUrl } from '@/lib/sanity'
-import { usePlayer } from '@/context/PlayerContext'
+import MusicCard from '@/components/music/MusicCard';
 import { Album } from '@/data/music'
-import Image from 'next/image'
-import Link from 'next/link'
 
 export default function MusicPage() {
-  const { play, pause, resume, state, setQueue } = usePlayer();
   const [musicData, setMusicData] = useState<Album[]>([]);
   const [loading, setLoading] = useState(true);
+  const [viewType, setViewType] = useState<'grid' | 'list'>('grid');
+  const [filterType, setFilterType] = useState<'all' | 'album' | 'single' | 'ep'>('all');
+  const [searchQuery, setSearchQuery] = useState('');
   
   useEffect(() => {
     async function fetchMusic() {
@@ -30,46 +29,15 @@ export default function MusicPage() {
     fetchMusic();
   }, []);
   
-  // Check if a given album is the current album being played
-  const isCurrentAlbum = (album: Album): boolean => {
-    if (!state.currentAlbum) return false;
+  // Filter music based on search and filter type
+  const filteredMusic = musicData.filter(album => {
+    const matchesSearch = searchQuery === '' || 
+      album.title.toLowerCase().includes(searchQuery.toLowerCase());
     
-    return (
-      // Check ID match
-      (state.currentAlbum.id && album.id && state.currentAlbum.id === album.id) ||
-      // Check slug match
-      (state.currentAlbum.slug && album.slug && state.currentAlbum.slug.current === album.slug.current) ||
-      // Check title match as fallback
-      (state.currentAlbum.title === album.title && state.currentAlbum.type === album.type)
-    );
-  };
-  
-  // Play the first track and set the album queue
-  const handlePlayAlbum = (album: any, e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
+    const matchesType = filterType === 'all' || album.type === filterType;
     
-    // Filter tracks that have valid audio URLs
-    const playableTracks = album.tracks.filter((track: any) => !!getAudioUrl(track));
-    
-    // Toggle play/pause if this is the current album
-    if (isCurrentAlbum(album)) {
-      if (state.isPlaying) {
-        pause();
-      } else {
-        resume();
-      }
-    } else {
-      // Play the first track of this album and set queue
-      if (playableTracks.length > 0) {
-        play(playableTracks[0], album);
-        setQueue(playableTracks);
-      } else {
-        // Alert or toast notification could be added here
-        console.warn('No playable tracks found in this album');
-      }
-    }
-  };
+    return matchesSearch && matchesType;
+  });
   
   if (loading) {
     return (
@@ -87,13 +55,24 @@ export default function MusicPage() {
         {/* Catalog Controls */}
         <div className="flex flex-wrap justify-between items-center mb-8">
           <div className="flex items-center gap-4 mb-4 md:mb-0">
-            <button className="px-4 py-2 rounded bg-secondary/30 text-light">Grid</button>
-            <button className="px-4 py-2 rounded text-light/70">List</button>
+            <button 
+              className={`px-4 py-2 rounded ${viewType === 'grid' ? 'bg-secondary/30 text-light' : 'text-light/70'}`}
+              onClick={() => setViewType('grid')}
+            >
+              Grid
+            </button>
+            <button 
+              className={`px-4 py-2 rounded ${viewType === 'list' ? 'bg-secondary/30 text-light' : 'text-light/70'}`}
+              onClick={() => setViewType('list')}
+            >
+              List
+            </button>
             
             <div className="relative">
               <select 
                 className="bg-dark/70 border border-light/20 rounded px-3 py-2 appearance-none pr-8 focus:outline-none focus:border-accent"
-                defaultValue="all"
+                value={filterType}
+                onChange={(e) => setFilterType(e.target.value as any)}
               >
                 <option value="all">All Albums</option>
                 <option value="album">Albums</option>
@@ -113,6 +92,8 @@ export default function MusicPage() {
               type="text" 
               placeholder="Search music..." 
               className="bg-dark/70 border border-light/20 rounded px-3 py-2 focus:outline-none focus:border-accent pl-10"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
             />
             <div className="absolute left-3 top-1/2 transform -translate-y-1/2">
               <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-light/70" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -122,88 +103,43 @@ export default function MusicPage() {
           </div>
         </div>
         
-        {/* Music Catalog Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
-          {musicData.map((album: any) => (
-            <div 
-              key={album._id || album.id}
-              className="bg-dark/50 glass-dark rounded-lg overflow-hidden hover:transform hover:scale-[1.02] transition-all"
+        {/* Music Catalog Grid or List */}
+        {viewType === 'grid' ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
+            {filteredMusic.map((album: Album) => (
+              <MusicCard 
+                key={album._id || album.id} 
+                album={album}
+              />
+            ))}
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {filteredMusic.map((album: Album) => (
+              <MusicCard 
+                key={album._id || album.id} 
+                album={album}
+                variant="compact"
+                className="flex flex-col md:flex-row md:h-32 hover:bg-dark/40 transition-colors"
+              />
+            ))}
+          </div>
+        )}
+
+        {filteredMusic.length === 0 && (
+          <div className="text-center py-20">
+            <h3 className="text-2xl text-light/70">No music found matching your criteria</h3>
+            <button 
+              className="mt-4 px-6 py-2 bg-primary/80 hover:bg-primary text-light rounded-full transition-colors"
+              onClick={() => {
+                setSearchQuery('');
+                setFilterType('all');
+              }}
             >
-              <div className="aspect-square bg-mid/20 relative">
-                {album.artwork && (
-                  <Image 
-                    src={album._type === 'music' 
-                      ? urlFor(album.artwork).url() 
-                      : album.artwork}
-                    alt={album.title}
-                    fill
-                    className="object-cover"
-                  />
-                )}
-                <div className="absolute inset-0 flex items-center justify-center opacity-0 hover:opacity-100 bg-dark/60 transition-opacity">
-                  <div className="flex gap-3">
-                    <button
-                      onClick={(e) => handlePlayAlbum(album, e)}
-                      className="w-16 h-16 rounded-full bg-primary/90 flex items-center justify-center hover:bg-primary transition-colors"
-                    >
-                      {isCurrentAlbum(album) && state.isPlaying ? (
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-light" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                        </svg>
-                      ) : (
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-light" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                        </svg>
-                      )}
-                    </button>
-                    <Link 
-                      href={album._type === 'music' 
-                        ? `/music/${album.slug.current}` 
-                        : `/music/${album.id}`}
-                      className="w-10 h-10 rounded-full bg-accent/90 flex items-center justify-center self-center hover:bg-accent transition-colors"
-                    >
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-light" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                      </svg>
-                    </Link>
-                  </div>
-                </div>
-                
-                {/* "Now Playing" indicator */}
-                {isCurrentAlbum(album) && (
-                  <div className="absolute top-2 right-2 bg-primary text-light text-xs font-bold py-1 px-2 rounded-full">
-                    {state.isPlaying ? 'Now Playing' : 'Paused'}
-                  </div>
-                )}
-              </div>
-              <div className="p-4">
-                <h3 className="text-lg font-medium text-light">{album.title}</h3>
-                <p className="text-light/70 text-sm">
-                  {album.year} • {album.tracks.length} tracks
-                </p>
-                <div className="flex mt-3 gap-2">
-                  <button 
-                    onClick={(e) => handlePlayAlbum(album, e)}
-                    className="text-xs bg-accent/20 text-accent px-2 py-1 rounded-sm hover:bg-accent/30 transition-colors"
-                  >
-                    {isCurrentAlbum(album) && state.isPlaying ? 'Pause' : 'Play Album'}
-                  </button>
-                  {album.downloadUrl && (
-                    <a 
-                      href={album.downloadUrl} 
-                      target="_blank" 
-                      rel="noopener noreferrer"
-                      className="text-xs bg-primary/20 text-primary px-2 py-1 rounded-sm hover:bg-primary/30 transition-colors"
-                    >
-                      Download
-                    </a>
-                  )}
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
+              Clear filters
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );

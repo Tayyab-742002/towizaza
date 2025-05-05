@@ -6,7 +6,7 @@ import Link from "next/link";
 import { getFeaturedMusic, getFeaturedProducts, getUpcomingReleases } from '@/lib/sanity';
 import { fallbackMusic, fallbackProducts } from '@/lib/fallbackData';
 import { urlFor } from '@/lib/sanity';
-import FeaturedTrack from "@/components/music/FeaturedTrack";
+import MusicCard from "@/components/music/MusicCard";
 
 export default function HomeClient() {
   const [featuredData, setFeaturedData] = useState<{
@@ -89,14 +89,18 @@ export default function HomeClient() {
       {/* Latest Releases Section */}
       <section className="py-20 bg-dark">
         <div className="container mx-auto px-6">
-          <h2 className="text-4xl font-bold text-light mb-12">Latest Releases</h2>
+          <div className="flex justify-between items-center mb-8">
+            <h2 className="text-4xl font-bold text-light">Latest Releases</h2>
+            <Link href="/music" className="text-primary hover:underline text-sm">View all</Link>
+          </div>
           
           {/* Music carousel */}
-          <div className="flex overflow-x-auto pb-8 gap-6">
-            {featuredData.music.map((album: any) => (
-              <FeaturedTrack 
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            {featuredData.music.slice(0, 4).map((album: any) => (
+              <MusicCard 
                 key={album._id || album.id} 
                 album={album}
+                variant="featured"
               />
             ))}
           </div>
@@ -106,53 +110,19 @@ export default function HomeClient() {
       {/* Upcoming Songs Section */}
       <section className="py-20 bg-gradient-to-b from-dark to-secondary/90">
         <div className="container mx-auto px-6">
-          <h2 className="text-4xl font-bold text-light mb-12">Upcoming Songs</h2>
+          <div className="flex justify-between items-center mb-8">
+            <h2 className="text-4xl font-bold text-light">Upcoming Songs</h2>
+            <Link href="/music" className="text-primary hover:underline text-sm">View more</Link>
+          </div>
           
-          {/* Upcoming songs list */}
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {featuredData.upcomingSongs.map((album: any) => (
-              <div key={album._id || album.id} className="glass p-6 rounded-lg">
-                <div className="flex gap-4 items-start mb-4">
-                  {/* Album artwork */}
-                  <div className="w-20 h-20 flex-shrink-0 bg-dark/40 rounded overflow-hidden">
-                    <img 
-                      src={album._type === 'album' 
-                        ? urlFor(album.artwork).url() 
-                        : album.artwork} 
-                      alt={album.title} 
-                      className="w-full h-full object-cover"
-                    />
-                  </div>
-                  
-                  <div className="flex-1">
-                    <h3 className="text-xl font-bold text-light">{album.title}</h3>
-                    <p className="text-light/70">
-                      {album.type.charAt(0).toUpperCase() + album.type.slice(1)} • {album.tracks.length} {album.tracks.length === 1 ? 'track' : 'tracks'}
-                    </p>
-                    
-                    <div className="mt-2 bg-primary/90 text-light px-2 py-1 rounded-md text-center inline-block">
-                      <span className="text-sm font-medium">
-                        {new Date(album.releaseDate).toLocaleDateString('en-US', { 
-                          month: 'short', 
-                          day: 'numeric', 
-                          year: 'numeric' 
-                        })}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-                
-                {/* First track preview */}
-                {album.tracks && album.tracks.length > 0 && (
-                  <div className="text-light/80 text-sm">
-                    <p className="mb-1">Featured track:</p>
-                    <div className="flex items-center justify-between bg-dark/30 rounded p-2">
-                      <span>{album.tracks[0].title}</span>
-                      <span>{album.tracks[0].duration}</span>
-                    </div>
-                  </div>
-                )}
-              </div>
+          {/* Upcoming songs grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {featuredData.upcomingSongs.slice(0, 3).map((album: any) => (
+              <MusicCard 
+                key={album._id || album.id} 
+                album={album}
+                className="h-full"
+              />
             ))}
           </div>
         </div>
@@ -167,15 +137,15 @@ export default function HomeClient() {
           </p>
           
           <form className="max-w-md mx-auto">
-            <div className="flex">
+            <div className="flex flex-col sm:flex-row gap-2">
               <input
                 type="email"
                 placeholder="Your email address"
-                className="flex-grow p-3 rounded-l-lg focus:outline-none bg-light text-dark"
+                className="flex-grow p-3 rounded-lg sm:rounded-l-lg sm:rounded-r-none focus:outline-none bg-light text-dark"
               />
               <button
                 type="submit"
-                className="bg-primary hover:bg-primary/90 text-light font-bold py-3 px-6 rounded-r-lg transition-all"
+                className="bg-primary hover:bg-primary/90 text-light font-bold py-3 px-6 rounded-lg sm:rounded-l-none sm:rounded-r-lg transition-all"
               >
                 Subscribe
               </button>
