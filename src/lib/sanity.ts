@@ -40,22 +40,21 @@ export async function getProductBySlug(slug: string) {
 
 // Function to fetch all music
 export async function getMusic() {
-  return client.fetch(`*[_type == "music"] | order(releaseDate desc)`)
+  return client.fetch(`*[_type == "music" && (upcoming != true || !defined(upcoming))] | order(releaseDate desc)`)
 }
 
 // Function to fetch featured music
 export async function getFeaturedMusic() {
-  // Get music and events that are featured
-  const musicQuery = `*[_type == "music" && featured == true] | order(releaseDate desc)[0...4]`;
-  const eventQuery = `*[_type == "event" && featured == true] | order(releaseDate asc)[0...4]`;
+  // Get music that is featured but not upcoming
+  const musicQuery = `*[_type == "music" && featured == true && (upcoming != true || !defined(upcoming))] | order(releaseDate desc)[0...4]`;
   
-  const [music, events] = await Promise.all([
-    client.fetch(musicQuery),
-    client.fetch(eventQuery)
-  ]);
-  
-  // Combine and return the results
-  return [...music, ...events];
+  try {
+    const music = await client.fetch(musicQuery);
+    return music || [];
+  } catch (error) {
+    console.error("Error fetching featured music:", error);
+    return [];
+  }
 }
 
 // Function to fetch a specific album by slug
@@ -117,18 +116,32 @@ export function getAudioUrl(track: Track): string {
   return '';
 }
 
-// Function to fetch upcoming releases (music and events marked as upcoming)
-export async function getUpcomingReleases() {
-  const currentDate = new Date().toISOString().split('T')[0]; // Format: YYYY-MM-DD
+// Function to fetch upcoming songs
+export async function getUpcomingSongs() {
+  console.log("Fetching upcoming songs from Sanity...");
   
-  const musicQuery = `*[_type == "music" && releaseDate > $currentDate] | order(releaseDate asc)`;
-  const eventQuery = `*[_type == "event" && upcoming == true] | order(releaseDate asc)`;
+  const query = `*[_type == "upcomingSong"] | order(releaseDate asc)`;
   
-  const [music, events] = await Promise.all([
-    client.fetch(musicQuery, { currentDate }),
-    client.fetch(eventQuery)
-  ]);
-  
-  // Combine and return the results
-  return [...music, ...events];
+  try {
+    console.log("Executing query:", query);
+    
+    const upcomingSongs = await client.fetch(query);
+    
+    console.log(`Found ${upcomingSongs?.length || 0} upcoming songs from Sanity`);
+    
+    if (!upcomingSongs || upcomingSongs.length === 0) {
+      console.log("No upcoming songs found in Sanity, returning fallback data");
+      // Import dynamically and use type assertion for fallback data
+      const { musicCatalog } = await import('@/data/music');
+      return musicCatalog.filter((item) => item.upcoming && item.featured);
+    }
+    
+    return upcomingSongs;
+  } catch (error) {
+    console.error("Error fetching upcoming songs:", error);
+    
+    // Import dynamically and use type assertion for fallback data
+    const { musicCatalog } = await import('@/data/music');
+    return musicCatalog.filter((item) => item.upcoming && item.featured);
+  }
 } 

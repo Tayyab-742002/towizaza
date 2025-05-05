@@ -3,10 +3,11 @@
 import { useState, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { getFeaturedMusic, getFeaturedProducts, getUpcomingReleases } from '@/lib/sanity';
+import { getFeaturedMusic, getFeaturedProducts, getUpcomingSongs } from '@/lib/sanity';
 import { fallbackMusic, fallbackProducts } from '@/lib/fallbackData';
 import { urlFor } from '@/lib/sanity';
 import MusicCard from "@/components/music/MusicCard";
+import UpcomingReleaseItem from "@/components/music/UpcomingReleaseItem";
 
 export default function HomeClient() {
   const [featuredData, setFeaturedData] = useState<{
@@ -24,24 +25,26 @@ export default function HomeClient() {
   useEffect(() => {
     async function fetchData() {
       try {
-        const [music, products, upcomingReleases] = await Promise.all([
+        // Fetch data from different sources
+        const [music, products, upcomingSongs] = await Promise.all([
           getFeaturedMusic(),
           getFeaturedProducts(),
-          getUpcomingReleases()
+          getUpcomingSongs()
         ]);
         
-        let musicData = music?.length > 0 ? music : fallbackMusic.filter(item => item.featured);
-        let upcomingSongs = upcomingReleases?.length > 0 
-          ? upcomingReleases 
-          : fallbackMusic.filter(item => item.upcoming && item.featured);
+        // Set default data if API returns empty
+        let musicData = music?.length > 0 
+          ? music 
+          : fallbackMusic.filter(item => item.featured && !item.upcoming);
         
         setFeaturedData({
-          music: musicData.filter((item: any) => !item.upcoming),
+          music: musicData,
           products: products?.length > 0 ? products : fallbackProducts.filter(item => item.featured),
-          upcomingSongs: upcomingSongs
+          upcomingSongs: upcomingSongs || []
         });
       } catch (error) {
         console.error('Error fetching featured data:', error);
+        // Fallback to mock data in case of error
         setFeaturedData({
           music: fallbackMusic.filter(item => item.featured && !item.upcoming),
           products: fallbackProducts.filter(item => item.featured),
@@ -94,7 +97,7 @@ export default function HomeClient() {
             <Link href="/music" className="text-primary hover:underline text-sm">View all</Link>
           </div>
           
-          {/* Music carousel */}
+          {/* Music grid with playable cards */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             {featuredData.music.slice(0, 4).map((album: any) => (
               <MusicCard 
@@ -107,26 +110,31 @@ export default function HomeClient() {
         </div>
       </section>
 
-      {/* Upcoming Songs Section */}
-      <section className="py-20 bg-gradient-to-b from-dark to-secondary/90">
-        <div className="container mx-auto px-6">
-          <div className="flex justify-between items-center mb-8">
-            <h2 className="text-4xl font-bold text-light">Upcoming Songs</h2>
-            <Link href="/music" className="text-primary hover:underline text-sm">View more</Link>
+      {/* Only show Upcoming Section if there are upcoming releases */}
+      {featuredData.upcomingSongs.length > 0 && (
+        <section className="py-20 bg-gradient-to-b from-dark to-secondary/90">
+          <div className="container mx-auto px-6">
+            <div className="flex justify-between items-center mb-8">
+              <h2 className="text-4xl font-bold text-light">Upcoming Releases</h2>
+              <div className="flex items-center gap-2">
+                <div className="bg-primary/20 text-primary px-2.5 py-1 rounded-full text-xs">
+                  {featuredData.upcomingSongs.length} upcoming
+                </div>
+              </div>
+            </div>
+            
+            {/* Upcoming songs list - Using new component */}
+            <div className="space-y-6">
+              {featuredData.upcomingSongs.map((album: any) => (
+                <UpcomingReleaseItem 
+                  key={album._id || album.id} 
+                  album={album}
+                />
+              ))}
+            </div>
           </div>
-          
-          {/* Upcoming songs grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {featuredData.upcomingSongs.slice(0, 3).map((album: any) => (
-              <MusicCard 
-                key={album._id || album.id} 
-                album={album}
-                className="h-full"
-              />
-            ))}
-          </div>
-        </div>
-      </section>
+        </section>
+      )}
 
       {/* Newsletter Section */}
       <section className="py-20 bg-secondary">

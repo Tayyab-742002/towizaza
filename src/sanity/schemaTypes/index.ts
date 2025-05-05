@@ -1,6 +1,6 @@
 import product from './product'
 import music from './music'
-import event from './event'
+import upcomingSong from './upcomingSong'
 import artist from './artist'
 
-export const schemaTypes = [product, music, event, artist] 
+export const schemaTypes = [product, music, upcomingSong, artist] 

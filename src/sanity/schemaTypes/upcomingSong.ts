@@ -1,8 +1,8 @@
 import {defineField, defineType} from 'sanity'
 
 export default defineType({
-  name: 'event',
-  title: 'Upcoming Releases',
+  name: 'upcomingSong',
+  title: 'Upcoming Songs',
   type: 'document',
   fields: [
     defineField({
@@ -37,7 +37,7 @@ export default defineType({
     defineField({
       name: 'releaseDate',
       title: 'Release Date',
-      description: 'When will this music be released',
+      description: 'When this song will be released',
       type: 'date',
       validation: (Rule) => Rule.required(),
     }),
@@ -54,9 +54,8 @@ export default defineType({
       name: 'year',
       title: 'Release Year',
       type: 'number',
-      description: 'Year of release (auto-calculated from release date)',
+      description: 'Auto-calculated from release date',
       readOnly: ({ document }) => {
-        // Auto-calculate from release date if available
         if (document?.releaseDate) {
           return true;
         }
@@ -72,35 +71,21 @@ export default defineType({
     }),
     defineField({
       name: 'streamUrl',
-      title: 'Stream URL',
-      description: 'Where will this music be available for streaming (e.g., Spotify, Apple Music)',
-      type: 'url',
-    }),
-    defineField({
-      name: 'downloadUrl',
-      title: 'Download URL',
-      description: 'Where will this music be available for download (e.g., Bandcamp)',
+      title: 'Future Stream URL',
+      description: 'Where this music will be available for streaming (optional)',
       type: 'url',
     }),
     defineField({
       name: 'featured',
       title: 'Featured',
-      description: 'Should this upcoming release be featured on the home page?',
+      description: 'Show on home page',
       type: 'boolean',
       initialValue: true,
-    }),
-    defineField({
-      name: 'upcoming',
-      title: 'Upcoming Release',
-      description: 'This marks the release as upcoming and not yet available for playback',
-      type: 'boolean',
-      initialValue: true,
-      readOnly: true,
     }),
     defineField({
       name: 'tracks',
       title: 'Tracks',
-      description: 'Add the tracks that will be included in this release',
+      description: 'Tracks in this upcoming release',
       type: 'array',
       of: [
         {
@@ -110,7 +95,7 @@ export default defineType({
               name: 'id',
               title: 'Track ID',
               type: 'string',
-              initialValue: () => Math.random().toString(36).substring(2, 9), // Random ID
+              initialValue: () => Math.random().toString(36).substring(2, 9),
               validation: (Rule) => Rule.required(),
             }),
             defineField({
@@ -158,7 +143,7 @@ export default defineType({
       
       return {
         title,
-        subtitle: `${subtitle || 'Release'} • ${formattedDate}`,
+        subtitle: `${subtitle || 'Release'} • Coming ${formattedDate}`,
         media,
       }
     },
