@@ -12,7 +12,7 @@ import { usePlayer } from '@/context/PlayerContext';
 export default function AlbumDetailPage() {
   const params = useParams();
   const slug = params.slug as string;
-  const { play, setQueue } = usePlayer();
+  const { play, pause, resume, state, setQueue } = usePlayer();
   
   const [album, setAlbum] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -60,6 +60,31 @@ export default function AlbumDetailPage() {
     fetchAlbum();
   }, [slug]);
 
+  // Check if this album is currently playing
+  const isCurrentAlbum = (): boolean => {
+    if (!state.currentAlbum || !album) return false;
+    
+    return (
+      // Check ID match
+      (state.currentAlbum.id && album.id && state.currentAlbum.id === album.id) ||
+      // Check slug match
+      (state.currentAlbum.slug && album.slug && state.currentAlbum.slug.current === album.slug.current) ||
+      // Check title match as fallback
+      (state.currentAlbum.title === album.title && state.currentAlbum.type === album.type)
+    );
+  };
+  
+  // Check if a specific track is playing
+  const isCurrentTrack = (track: any): boolean => {
+    if (!state.currentTrack || !track) return false;
+    
+    return (
+      (track.id && state.currentTrack.id && track.id === state.currentTrack.id) ||
+      (track._key && state.currentTrack._key && track._key === state.currentTrack._key) ||
+      (track.title === state.currentTrack.title)
+    );
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-dark text-light flex items-center justify-center">
@@ -103,6 +128,46 @@ export default function AlbumDetailPage() {
   const getFirstPlayableTrack = () => {
     return album.tracks.find((track: any) => !!getAudioUrl(track));
   };
+  
+  // Handle play/pause for the album
+  const handlePlayAlbum = () => {
+    const firstPlayableTrack = getFirstPlayableTrack();
+    if (!firstPlayableTrack) return;
+    
+    // Toggle play/pause if this is the current album
+    if (isCurrentAlbum()) {
+      if (state.isPlaying) {
+        pause();
+      } else {
+        resume();
+      }
+    } else {
+      // Play the first track of this album and set queue
+      play(firstPlayableTrack, album);
+      // Only add tracks that have audio URLs to the queue
+      const playableTracks = album.tracks.filter((track: any) => !!getAudioUrl(track));
+      setQueue(playableTracks);
+    }
+  };
+  
+  // Handle track selection
+  const handleTrackSelect = (track: any) => {
+    if (!getAudioUrl(track)) return;
+    
+    if (isCurrentTrack(track)) {
+      // Toggle play/pause if this is the current track
+      if (state.isPlaying) {
+        pause();
+      } else {
+        resume();
+      }
+    } else {
+      // Play this track and set the album queue
+      play(track, album);
+      const playableTracks = album.tracks.filter((t: any) => !!getAudioUrl(t));
+      setQueue(playableTracks);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-dark text-light">
@@ -118,6 +183,34 @@ export default function AlbumDetailPage() {
                 className="object-cover"
                 priority
               />
+              
+              {/* Play button overlay */}
+              <div 
+                className="absolute inset-0 bg-dark/50 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity cursor-pointer"
+                onClick={handlePlayAlbum}
+              >
+                <button 
+                  className="w-16 h-16 rounded-full bg-primary flex items-center justify-center transform hover:scale-110 transition-transform"
+                >
+                  {isCurrentAlbum() && state.isPlaying ? (
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-light" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                  ) : (
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-light" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                  )}
+                </button>
+              </div>
+              
+              {/* "Now Playing" indicator */}
+              {isCurrentAlbum() && (
+                <div className="absolute top-2 right-2 bg-primary text-light text-xs font-bold py-1 px-2 rounded-full">
+                  {state.isPlaying ? 'Now Playing' : 'Paused'}
+                </div>
+              )}
             </div>
             
             <div className="mt-6">
@@ -126,15 +219,7 @@ export default function AlbumDetailPage() {
               
               <div className="flex gap-3 mt-4">
                 <button 
-                  onClick={() => {
-                    const firstPlayableTrack = getFirstPlayableTrack();
-                    if (firstPlayableTrack) {
-                      play(firstPlayableTrack, album);
-                      // Only add tracks that have audio URLs to the queue
-                      const playableTracks = album.tracks.filter((track: any) => !!getAudioUrl(track));
-                      setQueue(playableTracks);
-                    }
-                  }}
+                  onClick={handlePlayAlbum}
                   className={`bg-accent text-light px-4 py-2 rounded-full text-sm font-medium ${
                     hasPlayableTracks 
                       ? 'hover:bg-accent/90 transition-colors' 
@@ -142,7 +227,7 @@ export default function AlbumDetailPage() {
                   }`}
                   disabled={!hasPlayableTracks}
                 >
-                  Play Album
+                  {isCurrentAlbum() && state.isPlaying ? 'Pause' : 'Play Album'}
                 </button>
                 
                 {album.downloadUrl && (
@@ -167,14 +252,28 @@ export default function AlbumDetailPage() {
               {album.tracks.map((track: any, index: number) => (
                 <div 
                   key={track.id || track._key}
-                  className={`flex items-center p-3 rounded-md hover:bg-light/5 transition-colors ${
+                  className={`flex items-center p-3 rounded-md ${
+                    isCurrentTrack(track) 
+                      ? 'bg-primary/20' 
+                      : 'hover:bg-light/5'
+                  } transition-colors ${
                     getAudioUrl(track) ? 'cursor-pointer' : 'cursor-not-allowed opacity-60' 
                   }`}
-                  onClick={() => getAudioUrl(track) ? play(track, album) : null}
+                  onClick={() => handleTrackSelect(track)}
                 >
-                  <div className="w-8 text-light/50 text-sm">{index + 1}</div>
+                  <div className="w-8 text-light/50 text-sm flex items-center justify-center">
+                    {isCurrentTrack(track) && state.isPlaying ? (
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-primary" viewBox="0 0 20 20" fill="currentColor">
+                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd" />
+                      </svg>
+                    ) : (
+                      <span>{index + 1}</span>
+                    )}
+                  </div>
                   <div className="flex-grow">
-                    <p className="font-medium">{track.title}</p>
+                    <p className={`font-medium ${isCurrentTrack(track) ? 'text-primary' : ''}`}>
+                      {track.title}
+                    </p>
                     {!getAudioUrl(track) && (
                       <p className="text-xs text-red-400">Audio not available</p>
                     )}
