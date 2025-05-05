@@ -47,7 +47,7 @@ export default function RootLayout({
           <CartProvider>
             <Navbar />
             <main className="flex-grow pt-16 sm:pt-20">
-              {children}
+        {children}
             </main>
             <Footer />
             <MusicPlayer />
