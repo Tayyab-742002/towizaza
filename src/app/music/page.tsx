@@ -7,6 +7,7 @@ import MusicCard from '@/components/music/MusicCard';
 import { Album } from '@/data/music';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useInView } from 'react-intersection-observer';
+import { Loading } from '@/components/common/Loading';
 
 // Categories for filter chips
 const CATEGORIES = [
@@ -89,12 +90,7 @@ export default function MusicPage() {
   
   if (loading) {
     return (
-      <div className="min-h-screen bg-dark text-light flex items-center justify-center">
-        <div className="animate-pulse flex flex-col items-center">
-          <div className="w-12 h-12 border-t-2 border-b-2 border-primary rounded-full animate-spin mb-4"></div>
-          <div className="text-xl font-medium text-light/80">Loading music catalog...</div>
-        </div>
-      </div>
+      <Loading  message='Loading Music Catelog'/>
     );
   }
   

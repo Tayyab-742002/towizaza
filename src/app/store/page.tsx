@@ -1,6 +1,8 @@
 import { getProducts } from '@/lib/sanity'
 import { fallbackProducts } from '@/lib/fallbackData'
-import StoreClient from './StoreClient'
+import StoreClient from '@/components/pages/StoreClient';
+
+
 
 // Revalidation settings for the server component
 export const revalidate = 3600

@@ -142,7 +142,7 @@ export default function TimelineSection() {
               return (
                 <div 
                   key={index} 
-                  ref={el => itemRefs.current[index] = el}
+                  ref={el => itemRefs.current[index] = el as any}
                   className={`mb-16 md:mb-24 relative flex flex-col ${
                     isEven 
                       ? 'md:flex-row-reverse md:pl-12 items-start' 

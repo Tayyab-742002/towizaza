@@ -11,6 +11,7 @@ import UpcomingReleasesSection from "@/components/home/UpcomingReleasesSection";
 import TestimonialsSection from "@/components/home/TestimonialsSection";
 import NewsletterSection from "@/components/home/NewsletterSection";
 import FeaturedMerchSection from "@/components/home/FeaturedMerchSection";
+import { Loading } from "../common/Loading";
 
 export default function HomeClient() {
   const [featuredData, setFeaturedData] = useState<{
@@ -68,9 +69,7 @@ export default function HomeClient() {
   
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-dark">
-        <div className="text-2xl text-light">Loading...</div>
-      </div>
+     <Loading message="Please Wait..."/>
     );
   }
   

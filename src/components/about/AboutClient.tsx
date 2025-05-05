@@ -5,11 +5,11 @@ import { motion } from 'framer-motion';
 import { useInView } from 'react-intersection-observer';
 import HeroSection from './HeroSection';
 import BiographySection from './BiographySection';
-import TimelineSection from './TimelineSection';
 import StatsSection from './StatsSection';
 import PressKitSection from './PressKitSection';
 import { getArtistInfo } from '@/lib/sanity';
 import { fallbackArtistInfo } from '@/lib/fallbackData';
+import TimelineSection from './TimelineSection';
 
 export default function AboutClient() {
   const [artistInfo, setArtistInfo] = useState<any>(null);

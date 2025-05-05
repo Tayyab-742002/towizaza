@@ -7,6 +7,7 @@ import { getMusicBySlug } from '@/lib/sanity';
 import { fallbackMusic } from '@/lib/fallbackData';
 import { urlFor, getAudioUrl } from '@/lib/sanity';
 import { usePlayer } from '@/context/PlayerContext';
+import { Loading } from '@/components/common/Loading';
 
 // Client component for music player functionality
 export default function AlbumDetailPage() {
@@ -87,9 +88,7 @@ export default function AlbumDetailPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-dark text-light flex items-center justify-center">
-        <div className="text-2xl font-semibold">Loading...</div>
-      </div>
+      <Loading message={`Loading Data`}/>
     );
   }
 
