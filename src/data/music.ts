@@ -23,6 +23,7 @@ export interface Album {
   streamUrl: string;
   downloadUrl?: string;
   featured?: boolean;
+  upcoming?: boolean; // Flag to mark upcoming releases
   _type?: string; // For Sanity type
   _id?: string; // For Sanity ID
   slug?: {
@@ -155,6 +156,55 @@ export const musicCatalog: Album[] = [
       { id: 'track-6-1', title: 'Ethereal Pulse', duration: '4:15' },
       { id: 'track-6-2', title: 'Ethereal Pulse (Club Mix)', duration: '5:40' },
       { id: 'track-6-3', title: 'Astral Projection', duration: '4:55' }
+    ]
+  },
+  // Upcoming releases
+  {
+    id: 'single-4',
+    title: 'Quantum Drift',
+    type: 'single',
+    releaseDate: '2024-08-15', // Future date
+    artwork: '/images/albums/quantum-drift.jpg',
+    year: 2024,
+    streamUrl: 'https://open.spotify.com/album/upcoming1',
+    upcoming: true,
+    featured: true,
+    tracks: [
+      { id: 'track-7-1', title: 'Quantum Drift', duration: '3:45' },
+      { id: 'track-7-2', title: 'Time Flux', duration: '4:20' }
+    ]
+  },
+  {
+    id: 'single-5',
+    title: 'Neural Wave',
+    type: 'single',
+    releaseDate: '2024-09-22', // Future date
+    artwork: '/images/albums/neural-wave.jpg',
+    year: 2024,
+    streamUrl: 'https://open.spotify.com/album/upcoming2',
+    upcoming: true,
+    featured: true,
+    tracks: [
+      { id: 'track-8-1', title: 'Neural Wave', duration: '4:12' },
+      { id: 'track-8-2', title: 'Synaptic Connection', duration: '3:58' }
+    ]
+  },
+  {
+    id: 'ep-2',
+    title: 'Cybernetic Dreams',
+    type: 'ep',
+    releaseDate: '2024-11-05', // Future date
+    artwork: '/images/albums/cybernetic-dreams.jpg',
+    year: 2024,
+    streamUrl: 'https://open.spotify.com/album/upcoming3',
+    upcoming: true,
+    featured: true,
+    tracks: [
+      { id: 'track-9-1', title: 'Digital Consciousness', duration: '4:45' },
+      { id: 'track-9-2', title: 'Neural Interface', duration: '5:10' },
+      { id: 'track-9-3', title: 'Machine Learning', duration: '3:55' },
+      { id: 'track-9-4', title: 'Algorithmic Beats', duration: '4:20' },
+      { id: 'track-9-5', title: 'Cybernetic Evolution', duration: '6:15' }
     ]
   }
 ]; 

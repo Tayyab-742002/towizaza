@@ -45,7 +45,17 @@ export async function getMusic() {
 
 // Function to fetch featured music
 export async function getFeaturedMusic() {
-  return client.fetch(`*[_type == "music" && featured == true] | order(releaseDate desc)[0...4]`)
+  // Get music and events that are featured
+  const musicQuery = `*[_type == "music" && featured == true] | order(releaseDate desc)[0...4]`;
+  const eventQuery = `*[_type == "event" && featured == true] | order(releaseDate asc)[0...4]`;
+  
+  const [music, events] = await Promise.all([
+    client.fetch(musicQuery),
+    client.fetch(eventQuery)
+  ]);
+  
+  // Combine and return the results
+  return [...music, ...events];
 }
 
 // Function to fetch a specific album by slug
@@ -105,4 +115,20 @@ export function getAudioUrl(track: Track): string {
   
   // Return empty string if no valid URL found
   return '';
+}
+
+// Function to fetch upcoming releases (music and events marked as upcoming)
+export async function getUpcomingReleases() {
+  const currentDate = new Date().toISOString().split('T')[0]; // Format: YYYY-MM-DD
+  
+  const musicQuery = `*[_type == "music" && releaseDate > $currentDate] | order(releaseDate asc)`;
+  const eventQuery = `*[_type == "event" && upcoming == true] | order(releaseDate asc)`;
+  
+  const [music, events] = await Promise.all([
+    client.fetch(musicQuery, { currentDate }),
+    client.fetch(eventQuery)
+  ]);
+  
+  // Combine and return the results
+  return [...music, ...events];
 } 

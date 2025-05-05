@@ -200,50 +200,87 @@ export default function Navbar() {
         </div>
       </div>
 
-      {/* Mobile Menu */}
+      {/* Mobile Menu - Side Panel */}
       <div
-        className={`fixed inset-0 bg-dark/95 backdrop-blur-md z-30 transform transition-all duration-300 ${
+        className={`fixed inset-0 z-50 md:hidden transition-opacity duration-300 ${
           mobileMenuOpen ? "opacity-100" : "opacity-0 pointer-events-none"
         }`}
       >
-        <div className="container mx-auto px-6 py-16">
-          <div className="flex flex-col space-y-6">
-            {navLinks.map((link) => (
-              <Link
-                key={link.href}
-                href={link.href}
-                className={`text-2xl font-medium py-2 transition-colors ${
-                  pathname === link.href
-                    ? "text-primary"
-                    : "text-light hover:text-primary"
-                }`}
-                onClick={() => setMobileMenuOpen(false)}
+        {/* Backdrop */}
+        <div 
+          className="absolute inset-0 bg-dark/80 backdrop-blur-sm"
+          onClick={() => setMobileMenuOpen(false)}
+        ></div>
+        
+        {/* Side Panel */}
+        <div 
+          className={`absolute top-0 right-0 bottom-0 w-72 bg-dark border-l border-light/10 overflow-y-auto transition-transform duration-300 transform ${
+            mobileMenuOpen ? "translate-x-0" : "translate-x-full"
+          }`}
+        >
+          {/* Close button */}
+          <div className="flex justify-end p-6">
+            <button
+              onClick={() => setMobileMenuOpen(false)}
+              className="text-light/70 hover:text-light transition-colors"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                className="h-6 w-6"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
               >
-                {link.label}
-              </Link>
-            ))}
-            
-            {/* Mobile Music Controls */}
-            <div className="mt-8 pt-8 border-t border-light/10">
-              <button
-                className="flex items-center space-x-3 text-light hover:text-primary transition-colors"
-              >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  className="h-6 w-6"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M6 18L18 6M6 6l12 12"
+                />
+              </svg>
+            </button>
+          </div>
+          
+          {/* Navigation links */}
+          <div className="px-6 pb-12">
+            <div className="flex flex-col space-y-6">
+              {navLinks.map((link) => (
+                <Link
+                  key={link.href}
+                  href={link.href}
+                  className={`text-lg font-medium py-2 transition-colors ${
+                    pathname === link.href
+                      ? "text-primary"
+                      : "text-light hover:text-primary"
+                  }`}
+                  onClick={() => setMobileMenuOpen(false)}
                 >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"
-                  />
-                </svg>
-                <span className="text-xl">Play Music</span>
-              </button>
+                  {link.label}
+                </Link>
+              ))}
+              
+              {/* Mobile Music Controls */}
+              <div className="mt-8 pt-8 border-t border-light/10">
+                <button
+                  className="flex items-center space-x-3 text-light hover:text-primary transition-colors"
+                >
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    className="h-6 w-6"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"
+                    />
+                  </svg>
+                  <span className="text-xl">Play Music</span>
+                </button>
+              </div>
             </div>
           </div>
         </div>
