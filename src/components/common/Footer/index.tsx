@@ -79,18 +79,18 @@ export default function Footer() {
   ];
 
   return (
-    <footer className="bg-dark text-light pt-16 pb-8">
-      <div className="container mx-auto px-6">
-        <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-10">
+    <footer className="bg-dark text-light pt-12 sm:pt-16 pb-6 sm:pb-8">
+      <div className="container mx-auto px-4 sm:px-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-8 sm:gap-10">
           {/* Brand Column */}
-          <div className="md:col-span-1 lg:col-span-1">
-            <Link href="/" className="text-3xl font-bold">
+          <div className="sm:col-span-2 md:col-span-1">
+            <Link href="/" className="text-2xl sm:text-3xl font-bold">
               TOWIZAZA
             </Link>
-            <p className="mt-4 text-light/70 text-sm">
+            <p className="mt-3 sm:mt-4 text-light/70 text-sm max-w-xs">
               Music artist blending electronic innovation with emotional depth.
             </p>
-            <div className="flex mt-6 space-x-4">
+            <div className="flex mt-4 sm:mt-6 space-x-4">
               {socialLinks.map((link) => (
                 <a
                   key={link.name}
@@ -108,13 +108,13 @@ export default function Footer() {
 
           {/* Quick Links Column */}
           <div>
-            <h3 className="text-lg font-bold mb-4">Quick Links</h3>
+            <h3 className="text-base sm:text-lg font-bold mb-3 sm:mb-4">Quick Links</h3>
             <ul className="space-y-2">
               {navLinks.map((link) => (
                 <li key={link.href}>
                   <Link
                     href={link.href}
-                    className="text-light/70 hover:text-primary transition-colors"
+                    className="text-light/70 hover:text-primary transition-colors text-sm sm:text-base"
                   >
                     {link.label}
                   </Link>
@@ -125,7 +125,7 @@ export default function Footer() {
 
           {/* Music Platforms Column */}
           <div>
-            <h3 className="text-lg font-bold mb-4">Music Platforms</h3>
+            <h3 className="text-base sm:text-lg font-bold mb-3 sm:mb-4">Music Platforms</h3>
             <ul className="space-y-2">
               {musicPlatforms.map((platform) => (
                 <li key={platform.name}>
@@ -133,7 +133,7 @@ export default function Footer() {
                     href={platform.url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-light/70 hover:text-primary transition-colors"
+                    className="text-light/70 hover:text-primary transition-colors text-sm sm:text-base"
                   >
                     {platform.name}
                   </a>
@@ -143,20 +143,20 @@ export default function Footer() {
           </div>
 
           {/* Newsletter Column */}
-          <div>
-            <h3 className="text-lg font-bold mb-4">Stay Updated</h3>
-            <p className="text-light/70 text-sm mb-4">
+          <div className="sm:col-span-2 md:col-span-1">
+            <h3 className="text-base sm:text-lg font-bold mb-3 sm:mb-4">Stay Updated</h3>
+            <p className="text-light/70 text-sm mb-3 sm:mb-4 max-w-xs">
               Subscribe to get exclusive updates and early access.
             </p>
-            <form className="flex flex-col sm:flex-row gap-2">
+            <form className="flex gap-2 max-w-xs">
               <input
                 type="email"
                 placeholder="Your email"
-                className="flex-grow p-2 rounded-l-lg focus:outline-none bg-dark/50 border border-light/20"
+                className="flex-grow p-2 rounded-l-lg focus:outline-none bg-dark/50 border border-light/20 text-sm"
               />
               <button
                 type="submit"
-                className="bg-primary hover:bg-primary/90 text-light font-medium py-2 px-4 rounded-r-lg transition-all"
+                className="bg-primary hover:bg-primary/90 text-light font-medium py-2 px-3 sm:px-4 rounded-r-lg transition-all text-sm whitespace-nowrap"
               >
                 Sign Up
               </button>
@@ -164,21 +164,21 @@ export default function Footer() {
           </div>
         </div>
 
-        <div className="border-t border-light/10 mt-12 pt-8">
-          <div className="flex flex-col md:flex-row justify-between items-center">
-            <p className="text-sm text-light/50">
+        <div className="border-t border-light/10 mt-8 sm:mt-12 pt-6 sm:pt-8">
+          <div className="flex flex-col sm:flex-row justify-between items-center">
+            <p className="text-xs sm:text-sm text-light/50">
               &copy; {new Date().getFullYear()} Towizaza. All rights reserved.
             </p>
-            <div className="flex space-x-6 mt-4 md:mt-0">
+            <div className="flex space-x-4 sm:space-x-6 mt-4 sm:mt-0">
               <a
                 href="/privacy"
-                className="text-sm text-light/50 hover:text-light transition-colors"
+                className="text-xs sm:text-sm text-light/50 hover:text-light transition-colors"
               >
                 Privacy Policy
               </a>
               <a
                 href="/terms"
-                className="text-sm text-light/50 hover:text-light transition-colors"
+                className="text-xs sm:text-sm text-light/50 hover:text-light transition-colors"
               >
                 Terms of Service
               </a>

@@ -6,6 +6,7 @@ import { PlayerProvider } from "@/context/PlayerContext";
 import MusicPlayer from "@/components/music/MusicPlayer";
 import Footer from '@/components/common/Footer'
 import { CartProvider } from "@/context/CartContext";
+import ShoppingCart from '@/components/store/ShoppingCart';
 
 const inter = Inter({ subsets: ['latin'] })
 
@@ -37,16 +38,20 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="en">
-      <body className={`${inter.className} min-h-screen flex flex-col`}>
+    <html lang="en" className="scroll-smooth">
+      <head>
+        <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
+      </head>
+      <body className={`${inter.className} min-h-screen flex flex-col bg-dark text-light`}>
         <PlayerProvider>
           <CartProvider>
             <Navbar />
-            <main className="flex-grow pt-20">
-        {children}
+            <main className="flex-grow pt-16 sm:pt-20">
+              {children}
             </main>
             <Footer />
             <MusicPlayer />
+            <ShoppingCart />
           </CartProvider>
         </PlayerProvider>
       </body>

@@ -3,12 +3,13 @@
 import { createContext, useContext, useReducer, ReactNode, useEffect } from 'react';
 import { Product, ProductVariant, ProductSize } from '@/data/store';
 
+// Extended CartItem interface to handle both complex and simple product structures
 interface CartItem {
   id: string;
-  product: Product;
+  product: Product | any; // Allow for Sanity product structure
   quantity: number;
-  variant?: ProductVariant;
-  size?: ProductSize;
+  variant?: ProductVariant | null;
+  size?: ProductSize | null;
 }
 
 interface CartState {
@@ -17,7 +18,7 @@ interface CartState {
 }
 
 type CartAction =
-  | { type: 'ADD_ITEM'; payload: { product: Product; quantity: number; variant?: ProductVariant; size?: ProductSize } }
+  | { type: 'ADD_ITEM'; payload: { product: any; quantity: number; variant?: ProductVariant | null; size?: ProductSize | null } }
   | { type: 'REMOVE_ITEM'; payload: { itemId: string } }
   | { type: 'UPDATE_QUANTITY'; payload: { itemId: string; quantity: number } }
   | { type: 'CLEAR_CART' }
@@ -26,7 +27,7 @@ type CartAction =
 
 interface CartContextType {
   state: CartState;
-  addItem: (product: Product, quantity: number, variant?: ProductVariant, size?: ProductSize) => void;
+  addToCart: (product: any, quantity: number, variant?: ProductVariant | null, size?: ProductSize | null) => void;
   removeItem: (itemId: string) => void;
   updateQuantity: (itemId: string, quantity: number) => void;
   clearCart: () => void;
@@ -43,8 +44,8 @@ const initialState: CartState = {
   isOpen: false
 };
 
-function generateCartItemId(product: Product, variant?: ProductVariant, size?: ProductSize): string {
-  let id = product.id;
+function generateCartItemId(product: any, variant?: ProductVariant | null, size?: ProductSize | null): string {
+  let id = product.id || product._id;
   if (variant) id += `-${variant.id}`;
   if (size) id += `-${size.id}`;
   return id;
@@ -163,7 +164,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
   }, 0);
   
   // Cart actions
-  const addItem = (product: Product, quantity: number, variant?: ProductVariant, size?: ProductSize) => {
+  const addToCart = (product: any, quantity: number, variant?: ProductVariant | null, size?: ProductSize | null) => {
     dispatch({ type: 'ADD_ITEM', payload: { product, quantity, variant, size } });
   };
   
@@ -189,7 +190,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
   
   const value = {
     state,
-    addItem,
+    addToCart,
     removeItem,
     updateQuantity,
     clearCart,
