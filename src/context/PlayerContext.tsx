@@ -194,145 +194,44 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(playerReducer, initialState);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   
-  // Effect to handle playing/pausing
+  // This effect coordinates with the external audio player
   useEffect(() => {
-    if (audioRef.current && state.currentTrack) {
-      // Set the audio source when the track changes
-      if (state.isPlaying) {
-        // Add media metadata for browser media controls
-        if ('mediaSession' in navigator) {
-          const trackUrl = getTrackAudioUrl(state.currentTrack);
-          const isVideo = isMP4File(trackUrl);
-          
-          navigator.mediaSession.metadata = new MediaMetadata({
-            title: state.currentTrack.title,
-            artist: 'Towizaza',
-            album: state.currentAlbum?.title || "Unknown Album",
-            artwork: state.currentAlbum?.artwork ? [
-              { 
-                src: typeof state.currentAlbum.artwork === 'string' 
-                  ? state.currentAlbum.artwork 
-                  : urlFor(state.currentAlbum.artwork).width(300).url(),
-                sizes: '300x300',
-                type: 'image/jpeg' 
-              }
-            ] : []
-          });
-
-          // Set action handlers
-          navigator.mediaSession.setActionHandler('play', resume);
-          navigator.mediaSession.setActionHandler('pause', pause);
-          navigator.mediaSession.setActionHandler('nexttrack', nextTrack);
-          navigator.mediaSession.setActionHandler('previoustrack', prevTrack);
-        }
-
-        // Double check src is set
-        const currentSrc = audioRef.current.src;
-        const expectedSrc = getTrackAudioUrl(state.currentTrack);
-        
-        if (currentSrc !== expectedSrc && expectedSrc) {
-          audioRef.current.src = expectedSrc;
-          // This will trigger the loadedmetadata event
-        }
-
-        audioRef.current.play().catch(error => {
-          console.error("Error playing audio:", error);
-          dispatch({ type: 'PAUSE' });
-        });
-      } else {
-        audioRef.current.pause();
-      }
-    }
-  }, [state.isPlaying, state.currentTrack]);
-  
-  // Effect to update volume
-  useEffect(() => {
-    if (audioRef.current) {
-      audioRef.current.volume = state.volume;
-    }
-  }, [state.volume]);
-  
-  // Update progress during playback
-  useEffect(() => {
-    const audio = audioRef.current;
-    
-    const handleTimeUpdate = () => {
-      if (audio) {
-        dispatch({ type: 'SET_PROGRESS', payload: { progress: audio.currentTime } });
-      }
-    };
-    
-    const handleLoadedMetadata = () => {
-      if (audio) {
-        dispatch({ type: 'SET_DURATION', payload: { duration: audio.duration } });
-        console.log("Audio loaded with duration:", audio.duration);
-      }
-    };
-    
-    const handleDurationChange = () => {
-      if (audio && !isNaN(audio.duration)) {
-        dispatch({ type: 'SET_DURATION', payload: { duration: audio.duration } });
-        console.log("Duration changed to:", audio.duration);
-      }
-    };
-    
-    const handleEnded = () => {
-      dispatch({ type: 'NEXT_TRACK' });
-    };
-    
-    if (audio) {
-      audio.addEventListener('timeupdate', handleTimeUpdate);
-      audio.addEventListener('loadedmetadata', handleLoadedMetadata);
-      audio.addEventListener('durationchange', handleDurationChange);
-      audio.addEventListener('ended', handleEnded);
-      
-      // If audio is already loaded, set the duration
-      if (audio.readyState >= 1 && !isNaN(audio.duration)) {
-        dispatch({ type: 'SET_DURATION', payload: { duration: audio.duration } });
-      }
-    }
-    
-    return () => {
-      if (audio) {
-        audio.removeEventListener('timeupdate', handleTimeUpdate);
-        audio.removeEventListener('loadedmetadata', handleLoadedMetadata);
-        audio.removeEventListener('durationchange', handleDurationChange);
-        audio.removeEventListener('ended', handleEnded);
-      }
-    };
-  }, [dispatch]);
-  
-  // Effect that watches for track changes to reset progress and duration
-  useEffect(() => {
+    // When the currentTrack changes, make sure we reset our state appropriately
     if (state.currentTrack) {
-      dispatch({ type: 'SET_PROGRESS', payload: { progress: 0 } });
-      dispatch({ type: 'SET_DURATION', payload: { duration: 0 } });
+      // The audio element from react-h5-audio-player will handle the actual audio
+      // Our audioRef is just for tracking state now
+      console.log("Track changed:", state.currentTrack.title);
     }
-  }, [state.currentTrack, dispatch]);
+  }, [state.currentTrack]);
   
   // Player actions
   const play = (track: Track, album?: Album) => {
+    console.log("Play track:", track.title);
     dispatch({ type: 'PLAY', payload: { track, album } });
     
     // If album is provided, set queue to album tracks
     if (album && album.tracks && album.tracks.length > 0) {
-      dispatch({ type: 'SET_QUEUE', payload: { tracks: album.tracks } });
+      const playableTracks = album.tracks.filter(t => !!getAudioUrl(t));
+      dispatch({ type: 'SET_QUEUE', payload: { tracks: playableTracks } });
     }
   };
   
   const pause = () => {
+    console.log("Pause");
     dispatch({ type: 'PAUSE' });
   };
   
   const resume = () => {
+    console.log("Resume");
     dispatch({ type: 'RESUME' });
   };
   
   const seek = (progress: number) => {
+    console.log("Seek to:", progress);
     if (audioRef.current) {
       audioRef.current.currentTime = progress;
+      dispatch({ type: 'SET_PROGRESS', payload: { progress } });
     }
-    dispatch({ type: 'SET_PROGRESS', payload: { progress } });
   };
   
   const setVolume = (volume: number) => {
@@ -371,47 +270,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   
   return (
     <PlayerContext.Provider value={value}>
-      {/* Audio element for playback */}
-      {state.currentTrack && (
-        <>
-          {isMP4File(getTrackAudioUrl(state.currentTrack)) ? (
-            <video
-              ref={audioRef as any}
-              src={getTrackAudioUrl(state.currentTrack)}
-              style={{ display: 'none' }}
-              crossOrigin="anonymous"
-              playsInline
-              onError={(e) => {
-                console.error('Error loading audio file:', e);
-                // Optionally display an error notification or try next track
-                if (state.queue.length > 1) {
-                  console.log('Attempting to play next track due to error');
-                  nextTrack();
-                } else {
-                  pause();
-                }
-              }}
-            />
-          ) : (
-            <audio
-              ref={audioRef}
-              src={getTrackAudioUrl(state.currentTrack)}
-              style={{ display: 'none' }}
-              crossOrigin="anonymous"
-              onError={(e) => {
-                console.error('Error loading audio file:', e);
-                // Optionally display an error notification or try next track
-                if (state.queue.length > 1) {
-                  console.log('Attempting to play next track due to error');
-                  nextTrack();
-                } else {
-                  pause();
-                }
-              }}
-            />
-          )}
-        </>
-      )}
+      {/* Audio element is now handled by the react-h5-audio-player component */}
       {children}
     </PlayerContext.Provider>
   );

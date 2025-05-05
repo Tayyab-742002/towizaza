@@ -10,7 +10,7 @@ import Image from 'next/image'
 import Link from 'next/link'
 
 export default function MusicPage() {
-  const { play, setQueue } = usePlayer();
+  const { play, pause, resume, state, setQueue } = usePlayer();
   const [musicData, setMusicData] = useState<Album[]>([]);
   const [loading, setLoading] = useState(true);
   
@@ -30,6 +30,20 @@ export default function MusicPage() {
     fetchMusic();
   }, []);
   
+  // Check if a given album is the current album being played
+  const isCurrentAlbum = (album: Album): boolean => {
+    if (!state.currentAlbum) return false;
+    
+    return (
+      // Check ID match
+      (state.currentAlbum.id && album.id && state.currentAlbum.id === album.id) ||
+      // Check slug match
+      (state.currentAlbum.slug && album.slug && state.currentAlbum.slug.current === album.slug.current) ||
+      // Check title match as fallback
+      (state.currentAlbum.title === album.title && state.currentAlbum.type === album.type)
+    );
+  };
+  
   // Play the first track and set the album queue
   const handlePlayAlbum = (album: any, e: React.MouseEvent) => {
     e.preventDefault();
@@ -38,12 +52,22 @@ export default function MusicPage() {
     // Filter tracks that have valid audio URLs
     const playableTracks = album.tracks.filter((track: any) => !!getAudioUrl(track));
     
-    if (playableTracks.length > 0) {
-      play(playableTracks[0], album);
-      setQueue(playableTracks);
+    // Toggle play/pause if this is the current album
+    if (isCurrentAlbum(album)) {
+      if (state.isPlaying) {
+        pause();
+      } else {
+        resume();
+      }
     } else {
-      // Alert or toast notification could be added here
-      console.warn('No playable tracks found in this album');
+      // Play the first track of this album and set queue
+      if (playableTracks.length > 0) {
+        play(playableTracks[0], album);
+        setQueue(playableTracks);
+      } else {
+        // Alert or toast notification could be added here
+        console.warn('No playable tracks found in this album');
+      }
     }
   };
   
@@ -122,10 +146,16 @@ export default function MusicPage() {
                       onClick={(e) => handlePlayAlbum(album, e)}
                       className="w-16 h-16 rounded-full bg-primary/90 flex items-center justify-center hover:bg-primary transition-colors"
                     >
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-light" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                      </svg>
+                      {isCurrentAlbum(album) && state.isPlaying ? (
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-light" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                      ) : (
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-light" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                      )}
                     </button>
                     <Link 
                       href={album._type === 'music' 
@@ -139,6 +169,13 @@ export default function MusicPage() {
                     </Link>
                   </div>
                 </div>
+                
+                {/* "Now Playing" indicator */}
+                {isCurrentAlbum(album) && (
+                  <div className="absolute top-2 right-2 bg-primary text-light text-xs font-bold py-1 px-2 rounded-full">
+                    {state.isPlaying ? 'Now Playing' : 'Paused'}
+                  </div>
+                )}
               </div>
               <div className="p-4">
                 <h3 className="text-lg font-medium text-light">{album.title}</h3>
@@ -150,7 +187,7 @@ export default function MusicPage() {
                     onClick={(e) => handlePlayAlbum(album, e)}
                     className="text-xs bg-accent/20 text-accent px-2 py-1 rounded-sm hover:bg-accent/30 transition-colors"
                   >
-                    Play Album
+                    {isCurrentAlbum(album) && state.isPlaying ? 'Pause' : 'Play Album'}
                   </button>
                   {album.downloadUrl && (
                     <a 
