@@ -2,11 +2,19 @@ import { createClient } from 'next-sanity'
 import imageUrlBuilder from '@sanity/image-url'
 import { Track } from '@/data/music'
 
+// Cache storage for query results
+// Using a Map allows us to use query + params as the key
+const queryCache = new Map<string, { data: any; timestamp: number }>()
+
+// Cache expiration time: 5 minutes in ms (adjust as needed)
+const CACHE_EXPIRY = 5 * 60 * 1000
+
 export const client = createClient({
   projectId: process.env.NEXT_PUBLIC_SANITY_PROJECT_ID || '',
   dataset: process.env.NEXT_PUBLIC_SANITY_DATASET || 'production',
   apiVersion: '2024-04-16', // Use today's date or the latest API version
-  useCdn: process.env.NODE_ENV === 'production',
+  useCdn: true, // Always use CDN for better performance
+  perspective: 'published',
 })
 
 // Create an image URL builder
@@ -17,19 +25,43 @@ export function urlFor(source: any) {
   return builder.image(source)
 }
 
+// Wrapper for client.fetch with caching
+async function cachedFetch(query: string, params?: any) {
+  // Create a cache key from the query and params
+  const cacheKey = JSON.stringify({ query, params })
+  
+  // Check if we have a valid cache entry
+  const cached = queryCache.get(cacheKey)
+  const now = Date.now()
+  
+  if (cached && (now - cached.timestamp < CACHE_EXPIRY)) {
+    console.log('Cache hit:', query.substring(0, 60) + '...')
+    return cached.data
+  }
+  
+  // No cache hit, fetch from Sanity
+  console.log('Cache miss, fetching from Sanity:', query.substring(0, 60) + '...')
+  const data = await client.fetch(query, params)
+  
+  // Store in cache
+  queryCache.set(cacheKey, { data, timestamp: now })
+  
+  return data
+}
+
 // Function to fetch products
 export async function getProducts() {
-  return client.fetch(`*[_type == "product"] | order(title asc)`)
+  return cachedFetch(`*[_type == "product"] | order(title asc)`)
 }
 
 // Function to fetch featured products
 export async function getFeaturedProducts() {
-  return client.fetch(`*[_type == "product" && featured == true] | order(title asc)[0...4]`)
+  return cachedFetch(`*[_type == "product" && featured == true] | order(title asc)[0...4]`)
 }
 
 // Function to fetch a specific product by slug
 export async function getProductBySlug(slug: string) {
-  return client.fetch(
+  return cachedFetch(
     `*[_type == "product" && slug.current == $slug][0]{
       ...,
       "relatedProducts": relatedProducts[]->
@@ -40,7 +72,7 @@ export async function getProductBySlug(slug: string) {
 
 // Function to fetch all music
 export async function getMusic() {
-  return client.fetch(`*[_type == "music" && (upcoming != true || !defined(upcoming))] | order(releaseDate desc)`)
+  return cachedFetch(`*[_type == "music" && (upcoming != true || !defined(upcoming))] | order(releaseDate desc)`)
 }
 
 // Function to fetch featured music
@@ -49,7 +81,7 @@ export async function getFeaturedMusic() {
   const musicQuery = `*[_type == "music" && featured == true && (upcoming != true || !defined(upcoming))] | order(releaseDate desc)[0...4]`;
   
   try {
-    const music = await client.fetch(musicQuery);
+    const music = await cachedFetch(musicQuery);
     return music || [];
   } catch (error) {
     console.error("Error fetching featured music:", error);
@@ -59,22 +91,22 @@ export async function getFeaturedMusic() {
 
 // Function to fetch a specific album by slug
 export async function getMusicBySlug(slug: string) {
-  return client.fetch(`*[_type == "music" && slug.current == $slug][0]`, { slug })
+  return cachedFetch(`*[_type == "music" && slug.current == $slug][0]`, { slug })
 }
 
 // Function to fetch events
 export async function getEvents() {
-  return client.fetch(`*[_type == "event" && date >= now()] | order(date asc)`)
+  return cachedFetch(`*[_type == "event" && date >= now()] | order(date asc)`)
 }
 
 // Function to fetch featured events
 export async function getFeaturedEvents() {
-  return client.fetch(`*[_type == "event" && featured == true && date >= now()] | order(date asc)[0...3]`)
+  return cachedFetch(`*[_type == "event" && featured == true && date >= now()] | order(date asc)[0...3]`)
 }
 
 // Function to fetch artist info
 export async function getArtistInfo() {
-  return client.fetch(`*[_type == "artist"][0]`)
+  return cachedFetch(`*[_type == "artist"][0]`)
 }
 
 // Helper function to safely get audio URL from various sources
@@ -118,16 +150,12 @@ export function getAudioUrl(track: Track): string {
 
 // Function to fetch upcoming songs
 export async function getUpcomingSongs() {
-  console.log("Fetching upcoming songs from Sanity...");
+  console.log("Fetching upcoming songs...");
   
   const query = `*[_type == "upcomingSong"] | order(releaseDate asc)`;
   
   try {
-    console.log("Executing query:", query);
-    
-    const upcomingSongs = await client.fetch(query);
-    
-    console.log(`Found ${upcomingSongs?.length || 0} upcoming songs from Sanity`);
+    const upcomingSongs = await cachedFetch(query);
     
     if (!upcomingSongs || upcomingSongs.length === 0) {
       console.log("No upcoming songs found in Sanity, returning fallback data");
@@ -144,4 +172,10 @@ export async function getUpcomingSongs() {
     const { musicCatalog } = await import('@/data/music');
     return musicCatalog.filter((item) => item.upcoming && item.featured);
   }
+}
+
+// Function to manually clear cache if needed (e.g., after a mutation)
+export function clearSanityCache() {
+  queryCache.clear();
+  console.log('Sanity cache cleared');
 } 
