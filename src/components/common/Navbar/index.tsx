@@ -36,7 +36,7 @@ export default function Navbar() {
     } else {
       document.body.style.overflow = "auto";
     }
-    
+
     return () => {
       document.body.style.overflow = "auto";
     };
@@ -53,10 +53,8 @@ export default function Navbar() {
 
   return (
     <nav
-      className={`fixed top-0 left-0 right-0 z-40 transition-all duration-300 ${
-        scrolled
-          ? "bg-dark/90 backdrop-blur-md py-3"
-          : "bg-transparent py-6"
+      className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300  z-1000 ${
+        scrolled ? "bg-dark/90 backdrop-blur-md py-3" : "bg-transparent py-6"
       }`}
     >
       <div className="container mx-auto px-6 flex justify-between items-center">
@@ -202,18 +200,20 @@ export default function Navbar() {
 
       {/* Mobile Menu - Side Panel */}
       <div
-        className={`fixed inset-0 z-50 md:hidden transition-opacity duration-300 ${
-          mobileMenuOpen ? "opacity-100" : "opacity-0 pointer-events-none"
+        className={`fixed inset-0 md:hidden transition-opacity duration-300 ${
+          mobileMenuOpen
+            ? "opacity-100 z-[100]"
+            : "opacity-0 pointer-events-none"
         }`}
       >
         {/* Backdrop */}
-        <div 
+        <div
           className="absolute inset-0 bg-dark/80 backdrop-blur-sm"
           onClick={() => setMobileMenuOpen(false)}
         ></div>
-        
+
         {/* Side Panel */}
-        <div 
+        <div
           className={`absolute top-0 right-0 bottom-0 w-72 bg-dark border-l border-light/10 overflow-y-auto transition-transform duration-300 transform ${
             mobileMenuOpen ? "translate-x-0" : "translate-x-full"
           }`}
@@ -240,7 +240,7 @@ export default function Navbar() {
               </svg>
             </button>
           </div>
-          
+
           {/* Navigation links */}
           <div className="px-6 pb-12">
             <div className="flex flex-col space-y-6">
@@ -258,12 +258,10 @@ export default function Navbar() {
                   {link.label}
                 </Link>
               ))}
-              
+
               {/* Mobile Music Controls */}
               <div className="mt-8 pt-8 border-t border-light/10">
-                <button
-                  className="flex items-center space-x-3 text-light hover:text-primary transition-colors"
-                >
+                <button className="flex items-center space-x-3 text-light hover:text-primary transition-colors">
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
                     className="h-6 w-6"
@@ -287,4 +285,4 @@ export default function Navbar() {
       </div>
     </nav>
   );
-} 
+}
