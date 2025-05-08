@@ -1,21 +1,21 @@
-'use client';
+"use client";
 
-import { useState, useEffect, useRef } from 'react';
-import { urlFor } from '@/lib/sanity';
-import { useCart } from '@/context/CartContext';
-import Image from 'next/image';
-import Link from 'next/link';
-import { motion, AnimatePresence } from 'framer-motion';
-import { useInView } from 'react-intersection-observer';
-import ProductCard from '@/components/store/ProductCard';
+import { useState, useEffect, useRef } from "react";
+import { urlFor } from "@/lib/sanity";
+import { useCart } from "@/context/CartContext";
+import Image from "next/image";
+import Link from "next/link";
+import { motion, AnimatePresence } from "framer-motion";
+import { useInView } from "react-intersection-observer";
+import ProductCard from "@/components/store/ProductCard";
 
 // Categories for filter chips
 const CATEGORIES = [
-  { value: 'all', label: 'All' },
-  { value: 'apparel', label: 'Apparel' },
-  { value: 'vinyl', label: 'Vinyl' },
-  { value: 'cd', label: 'CDs' },
-  { value: 'accessories', label: 'Accessories' }
+  { value: "all", label: "All" },
+  { value: "apparel", label: "Apparel" },
+  { value: "vinyl", label: "Vinyl" },
+  { value: "cd", label: "CDs" },
+  { value: "accessories", label: "Accessories" },
 ];
 
 interface StoreClientProps {
@@ -24,47 +24,54 @@ interface StoreClientProps {
 
 export default function StoreClient({ initialProducts }: StoreClientProps) {
   const [products, setProducts] = useState(initialProducts);
-  const [filterCategory, setFilterCategory] = useState('all');
-  const [searchQuery, setSearchQuery] = useState('');
+  const [filterCategory, setFilterCategory] = useState("all");
+  const [searchQuery, setSearchQuery] = useState("");
   const [showFilters, setShowFilters] = useState(false);
-  const [sortBy, setSortBy] = useState<'featured' | 'newest' | 'price-low' | 'price-high'>('featured');
+  const [sortBy, setSortBy] = useState<
+    "featured" | "newest" | "price-low" | "price-high"
+  >("featured");
   const [isLoading, setIsLoading] = useState(false);
-  
+
   const { addToCart, toggleCart } = useCart();
   const filtersRef = useRef<HTMLDivElement>(null);
 
   // Intersection observers for animations
   const [heroRef, heroInView] = useInView({
     triggerOnce: true,
-    threshold: 0.1
+    threshold: 0.1,
   });
-  
+
   const [productsRef, productsInView] = useInView({
     triggerOnce: true,
-    threshold: 0.1
+    threshold: 0.1,
   });
 
   // Filter and sort products
   const filteredProducts = products
-    .filter(product => {
-      const matchesCategory = filterCategory === 'all' || product.category === filterCategory;
-      const matchesSearch = searchQuery === '' || 
+    .filter((product) => {
+      const matchesCategory =
+        filterCategory === "all" || product.category === filterCategory;
+      const matchesSearch =
+        searchQuery === "" ||
         product.title.toLowerCase().includes(searchQuery.toLowerCase());
       return matchesCategory && matchesSearch;
     })
     .sort((a, b) => {
-      if (sortBy === 'featured') {
+      if (sortBy === "featured") {
         // Featured items first, then new items
         if (a.featured && !b.featured) return -1;
         if (!a.featured && b.featured) return 1;
         if (a.new && !b.new) return -1;
         if (!a.new && b.new) return 1;
         return 0;
-      } else if (sortBy === 'newest') {
-        return new Date(b.createdAt || '2023-01-01').getTime() - new Date(a.createdAt || '2023-01-01').getTime();
-      } else if (sortBy === 'price-low') {
+      } else if (sortBy === "newest") {
+        return (
+          new Date(b.createdAt || "2023-01-01").getTime() -
+          new Date(a.createdAt || "2023-01-01").getTime()
+        );
+      } else if (sortBy === "price-low") {
         return a.price - b.price;
-      } else if (sortBy === 'price-high') {
+      } else if (sortBy === "price-high") {
         return b.price - a.price;
       }
       return 0;
@@ -73,11 +80,11 @@ export default function StoreClient({ initialProducts }: StoreClientProps) {
   const handleAddToCart = (product: any, e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    
+
     if (!product.inStock) return;
-    
+
     setIsLoading(true);
-    
+
     // Simulate a small delay for better UX
     setTimeout(() => {
       addToCart(product, 1);
@@ -85,50 +92,35 @@ export default function StoreClient({ initialProducts }: StoreClientProps) {
       setIsLoading(false);
     }, 300);
   };
-  
+
   const toggleFilters = () => {
     setShowFilters(!showFilters);
   };
-  
+
   const clearFilters = () => {
-    setSearchQuery('');
-    setFilterCategory('all');
-    setSortBy('featured');
+    setSearchQuery("");
+    setFilterCategory("all");
+    setSortBy("featured");
   };
-  
-  const getProductImageUrl = (product: any) => {
-    try {
-      if (!product.images || product.images.length === 0) {
-        return '/images/placeholder-product.jpg';
-      }
-      
-      if (typeof product.images[0] === 'string') {
-        return product.images[0];
-      }
-      
-      // If it's a Sanity image
-      return urlFor(product.images[0]).url();
-    } catch (error) {
-      console.error("Error getting product image:", error);
-      return '/images/placeholder-product.jpg';
-    }
-  };
-  
+
   // Generate counts for stats
-  const categoryStats = CATEGORIES.reduce((acc, category) => {
-    if (category.value === 'all') return acc;
-    
-    acc[category.value] = products.filter(
-      product => product.category === category.value
-    ).length;
-    
-    return acc;
-  }, {} as Record<string, number>);
-  
+  const categoryStats = CATEGORIES.reduce(
+    (acc, category) => {
+      if (category.value === "all") return acc;
+
+      acc[category.value] = products.filter(
+        (product) => product.category === category.value
+      ).length;
+
+      return acc;
+    },
+    {} as Record<string, number>
+  );
+
   return (
     <div className="min-h-screen bg-dark text-light">
       {/* Hero Section */}
-      <motion.section 
+      <motion.section
         ref={heroRef}
         className="relative py-24 bg-gradient-to-b from-secondary/30 to-dark overflow-hidden"
         initial={{ opacity: 0 }}
@@ -140,7 +132,7 @@ export default function StoreClient({ initialProducts }: StoreClientProps) {
           <div className="absolute inset-0 bg-gradient-to-r from-primary/30 to-accent/30"></div>
           <div className="h-full w-full bg-grid-pattern"></div>
         </div>
-        
+
         <div className="container mx-auto px-6 relative z-10">
           <motion.div
             initial={{ opacity: 0, y: 30 }}
@@ -148,25 +140,32 @@ export default function StoreClient({ initialProducts }: StoreClientProps) {
             transition={{ duration: 0.6, delay: 0.2 }}
             className="max-w-4xl"
           >
-            <h1 className="text-6xl md:text-7xl font-bold mb-4">Official Merch</h1>
+            <h1 className="text-6xl md:text-7xl font-bold mb-4">
+              Official Merch
+            </h1>
             <p className="text-xl text-light/80 max-w-2xl">
-              Exclusive merchandise from Towizaza. Apparel, vinyl records, and accessories for true fans.
+              Exclusive merchandise from Towizaza. Apparel, vinyl records, and
+              accessories for true fans.
             </p>
-            
+
             <div className="mt-8 flex flex-wrap gap-4">
-              <button 
+              <button
                 onClick={() => {
-                  setFilterCategory('apparel');
-                  document.getElementById('store')?.scrollIntoView({ behavior: 'smooth' });
+                  setFilterCategory("apparel");
+                  document
+                    .getElementById("store")
+                    ?.scrollIntoView({ behavior: "smooth" });
                 }}
                 className="px-6 py-3 bg-primary hover:bg-primary/90 text-light font-medium rounded-full transition-all transform hover:scale-105"
               >
                 Shop Apparel
               </button>
-              <button 
+              <button
                 onClick={() => {
-                  setFilterCategory('vinyl');
-                  document.getElementById('store')?.scrollIntoView({ behavior: 'smooth' });
+                  setFilterCategory("vinyl");
+                  document
+                    .getElementById("store")
+                    ?.scrollIntoView({ behavior: "smooth" });
                 }}
                 className="px-6 py-3 bg-dark/70 hover:bg-dark/50 text-light font-medium rounded-full transition-all transform hover:scale-105 border border-light/30"
               >
@@ -174,30 +173,39 @@ export default function StoreClient({ initialProducts }: StoreClientProps) {
               </button>
             </div>
           </motion.div>
-          
+
           {/* Product count stats */}
-          <motion.div 
-            className="mt-12 flex flex-wrap gap-6"
+          <motion.div
+            className="mt-12 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4"
             initial={{ opacity: 0, y: 30 }}
             animate={heroInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 30 }}
             transition={{ duration: 0.6, delay: 0.4 }}
           >
             {Object.entries(categoryStats).map(([category, count]) => (
-              <div key={category} className="bg-dark/30 backdrop-blur-md px-6 py-3 rounded-lg border border-light/5">
+              <div
+                key={category}
+                className="bg-dark/30 backdrop-blur-md px-4 py-3 rounded-lg border border-light/5 flex flex-col items-center justify-center text-center h-full"
+              >
                 <div className="text-primary font-bold text-3xl">{count}</div>
-                <div className="text-light/70 capitalize">{category}</div>
+                <div className="text-light/70 capitalize text-sm sm:text-base">
+                  {category}
+                </div>
               </div>
             ))}
-            <div className="bg-dark/30 backdrop-blur-md px-6 py-3 rounded-lg border border-light/5">
-              <div className="text-primary font-bold text-3xl">{products.length}</div>
-              <div className="text-light/70">Total Items</div>
+            <div className="bg-dark/30 backdrop-blur-md px-4 py-3 rounded-lg border border-light/5 flex flex-col items-center justify-center text-center h-full">
+              <div className="text-primary font-bold text-3xl">
+                {products.length}
+              </div>
+              <div className="text-light/70 text-sm sm:text-base">
+                Total Items
+              </div>
             </div>
           </motion.div>
         </div>
       </motion.section>
-      
+
       {/* Products Section */}
-      <motion.section 
+      <motion.section
         id="store"
         ref={productsRef}
         className="py-16"
@@ -207,32 +215,45 @@ export default function StoreClient({ initialProducts }: StoreClientProps) {
       >
         <div className="container mx-auto px-6">
           <div className="flex justify-between items-center mb-8">
-            <h2 className="text-3xl font-bold">Shop <span className="text-primary">Merchandise</span></h2>
-            
+            <h2 className="text-3xl font-bold">
+              Shop <span className="text-primary">Merchandise</span>
+            </h2>
+
             <div className="flex items-center gap-2">
-              <button 
+              <button
                 onClick={toggleFilters}
                 className="bg-dark/70 border border-light/20 rounded-lg px-4 py-2 flex items-center gap-2 hover:bg-dark/50 transition-colors"
                 aria-label="Toggle filters"
               >
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                  <path fillRule="evenodd" d="M3 3a1 1 0 011-1h12a1 1 0 011 1v3a1 1 0 01-.293.707L12 11.414V15a1 1 0 01-.293.707l-2 2A1 1 0 018 17v-5.586L3.293 6.707A1 1 0 013 6V3z" clipRule="evenodd" />
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="h-5 w-5"
+                  viewBox="0 0 20 20"
+                  fill="currentColor"
+                >
+                  <path
+                    fillRule="evenodd"
+                    d="M3 3a1 1 0 011-1h12a1 1 0 011 1v3a1 1 0 01-.293.707L12 11.414V15a1 1 0 01-.293.707l-2 2A1 1 0 018 17v-5.586L3.293 6.707A1 1 0 013 6V3z"
+                    clipRule="evenodd"
+                  />
                 </svg>
                 <span className="hidden sm:inline">Filters</span>
-                {(searchQuery || filterCategory !== 'all' || sortBy !== 'featured') && (
+                {(searchQuery ||
+                  filterCategory !== "all" ||
+                  sortBy !== "featured") && (
                   <span className="bg-primary w-2 h-2 rounded-full"></span>
                 )}
               </button>
             </div>
           </div>
-          
+
           {/* Filters panel */}
           <AnimatePresence>
             {showFilters && (
               <motion.div
                 ref={filtersRef}
                 initial={{ height: 0, opacity: 0 }}
-                animate={{ height: 'auto', opacity: 1 }}
+                animate={{ height: "auto", opacity: 1 }}
                 exit={{ height: 0, opacity: 0 }}
                 transition={{ duration: 0.3 }}
                 className="overflow-hidden mb-8"
@@ -240,44 +261,68 @@ export default function StoreClient({ initialProducts }: StoreClientProps) {
                 <div className="bg-dark/30 backdrop-blur-md border border-light/10 rounded-xl p-5">
                   <div className="flex flex-col md:flex-row gap-6 items-start md:items-center">
                     <div className="flex-1">
-                      <label className="block text-light/70 text-sm mb-2">Search</label>
+                      <label className="block text-light/70 text-sm mb-2">
+                        Search
+                      </label>
                       <div className="relative">
-                        <input 
-                          type="text" 
-                          placeholder="Search products..." 
+                        <input
+                          type="text"
+                          placeholder="Search products..."
                           className="w-full bg-dark/70 border border-light/20 rounded-lg px-4 py-2.5 focus:outline-none focus:border-primary pl-10"
                           value={searchQuery}
                           onChange={(e) => setSearchQuery(e.target.value)}
                         />
                         <div className="absolute left-3 top-1/2 transform -translate-y-1/2">
-                          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-light/50" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            className="h-4 w-4 text-light/50"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                            />
                           </svg>
                         </div>
                         {searchQuery && (
-                          <button 
-                            onClick={() => setSearchQuery('')}
+                          <button
+                            onClick={() => setSearchQuery("")}
                             className="absolute right-3 top-1/2 transform -translate-y-1/2 text-light/50 hover:text-light"
                           >
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                            <svg
+                              xmlns="http://www.w3.org/2000/svg"
+                              className="h-4 w-4"
+                              viewBox="0 0 20 20"
+                              fill="currentColor"
+                            >
+                              <path
+                                fillRule="evenodd"
+                                d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
+                                clipRule="evenodd"
+                              />
                             </svg>
                           </button>
                         )}
                       </div>
                     </div>
-                    
+
                     <div className="w-full md:w-auto">
-                      <label className="block text-light/70 text-sm mb-2">Category</label>
+                      <label className="block text-light/70 text-sm mb-2">
+                        Category
+                      </label>
                       <div className="flex flex-wrap gap-2">
-                        {CATEGORIES.map(category => (
+                        {CATEGORIES.map((category) => (
                           <button
                             key={category.value}
                             onClick={() => setFilterCategory(category.value)}
                             className={`px-4 py-2 rounded-lg text-sm ${
-                              filterCategory === category.value 
-                                ? 'bg-primary text-light font-medium' 
-                                : 'bg-dark/50 text-light/70 hover:bg-dark/30'
+                              filterCategory === category.value
+                                ? "bg-primary text-light font-medium"
+                                : "bg-dark/50 text-light/70 hover:bg-dark/30"
                             } transition-colors`}
                           >
                             {category.label}
@@ -285,10 +330,12 @@ export default function StoreClient({ initialProducts }: StoreClientProps) {
                         ))}
                       </div>
                     </div>
-                    
+
                     <div className="w-full md:w-auto">
-                      <label className="block text-light/70 text-sm mb-2">Sort By</label>
-                      <select 
+                      <label className="block text-light/70 text-sm mb-2">
+                        Sort By
+                      </label>
+                      <select
                         className="bg-dark/70 border border-light/20 rounded-lg px-4 py-2.5 appearance-none pr-10 focus:outline-none focus:border-primary w-full md:w-auto"
                         value={sortBy}
                         onChange={(e) => setSortBy(e.target.value as any)}
@@ -299,14 +346,23 @@ export default function StoreClient({ initialProducts }: StoreClientProps) {
                         <option value="price-high">Price: High to Low</option>
                       </select>
                     </div>
-                    
+
                     <div className="ml-auto mt-4 md:mt-0">
-                      <button 
+                      <button
                         onClick={clearFilters}
                         className="bg-dark/50 hover:bg-dark/30 text-light/80 px-4 py-2.5 rounded-lg text-sm transition-colors flex items-center gap-2"
                       >
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                          <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          className="h-4 w-4"
+                          viewBox="0 0 20 20"
+                          fill="currentColor"
+                        >
+                          <path
+                            fillRule="evenodd"
+                            d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
+                            clipRule="evenodd"
+                          />
                         </svg>
                         Clear Filters
                       </button>
@@ -316,14 +372,15 @@ export default function StoreClient({ initialProducts }: StoreClientProps) {
               </motion.div>
             )}
           </AnimatePresence>
-          
+
           {/* Results count */}
           <div className="mb-8 text-light/70 text-sm">
-            Showing {filteredProducts.length} {filteredProducts.length === 1 ? 'product' : 'products'}
-            {filterCategory !== 'all' && ` in ${filterCategory}`}
+            Showing {filteredProducts.length}{" "}
+            {filteredProducts.length === 1 ? "product" : "products"}
+            {filterCategory !== "all" && ` in ${filterCategory}`}
             {searchQuery && ` matching "${searchQuery}"`}
           </div>
-          
+
           {/* Products Grid */}
           <AnimatePresence mode="wait">
             <motion.div
@@ -338,8 +395,9 @@ export default function StoreClient({ initialProducts }: StoreClientProps) {
                   {filteredProducts.map((product, index) => {
                     // Limit featured products to avoid layout issues
                     // Only make first product featured and certain products at specific intervals
-                    const isFeatured = (index === 0 || (index % 12 === 6)) && product.featured;
-                    
+                    const isFeatured =
+                      (index === 0 || index % 12 === 6) && product.featured;
+
                     return (
                       <ProductCard
                         key={product._id || product.id}
@@ -353,25 +411,48 @@ export default function StoreClient({ initialProducts }: StoreClientProps) {
                   })}
                 </div>
               ) : (
-                <motion.div 
+                <motion.div
                   className="bg-dark/20 backdrop-blur-md rounded-xl p-10 text-center"
                   initial={{ opacity: 0, scale: 0.9 }}
                   animate={{ opacity: 1, scale: 1 }}
                   transition={{ duration: 0.4 }}
                 >
                   <div className="mb-4">
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 text-light/30 mx-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      className="h-12 w-12 text-light/30 mx-auto"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={1.5}
+                        d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"
+                      />
                     </svg>
                   </div>
                   <h3 className="text-xl text-light mb-2">No products found</h3>
-                  <p className="text-light/60 mb-6">We couldn't find any products matching your criteria. Try adjusting your filters.</p>
-                  <button 
+                  <p className="text-light/60 mb-6">
+                    We couldn't find any products matching your criteria. Try
+                    adjusting your filters.
+                  </p>
+                  <button
                     className="px-6 py-2.5 bg-primary/80 hover:bg-primary text-light rounded-lg transition-colors inline-flex items-center gap-2"
                     onClick={clearFilters}
                   >
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                      <path fillRule="evenodd" d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z" clipRule="evenodd" />
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      className="h-4 w-4"
+                      viewBox="0 0 20 20"
+                      fill="currentColor"
+                    >
+                      <path
+                        fillRule="evenodd"
+                        d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z"
+                        clipRule="evenodd"
+                      />
                     </svg>
                     Reset Filters
                   </button>
@@ -379,17 +460,34 @@ export default function StoreClient({ initialProducts }: StoreClientProps) {
               )}
             </motion.div>
           </AnimatePresence>
-          
+
           {/* Pagination for future implementation */}
           {filteredProducts.length > 0 && (
             <div className="mt-12 flex justify-center">
               <div className="inline-flex gap-2 bg-dark/30 backdrop-blur-md rounded-lg p-1">
-                <button className="w-9 h-9 flex items-center justify-center rounded-md bg-primary text-light">1</button>
-                <button className="w-9 h-9 flex items-center justify-center rounded-md hover:bg-dark/50 text-light/70 hover:text-light transition-colors">2</button>
-                <button className="w-9 h-9 flex items-center justify-center rounded-md hover:bg-dark/50 text-light/70 hover:text-light transition-colors">3</button>
+                <button className="w-9 h-9 flex items-center justify-center rounded-md bg-primary text-light">
+                  1
+                </button>
                 <button className="w-9 h-9 flex items-center justify-center rounded-md hover:bg-dark/50 text-light/70 hover:text-light transition-colors">
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  2
+                </button>
+                <button className="w-9 h-9 flex items-center justify-center rounded-md hover:bg-dark/50 text-light/70 hover:text-light transition-colors">
+                  3
+                </button>
+                <button className="w-9 h-9 flex items-center justify-center rounded-md hover:bg-dark/50 text-light/70 hover:text-light transition-colors">
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    className="h-4 w-4"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M9 5l7 7-7 7"
+                    />
                   </svg>
                 </button>
               </div>
@@ -399,4 +497,4 @@ export default function StoreClient({ initialProducts }: StoreClientProps) {
       </motion.section>
     </div>
   );
-} 
+}

@@ -42,40 +42,21 @@ export default function HeroSection() {
   return (
     <motion.section
       ref={containerRef}
-      className="relative h-[70vh] overflow-hidden bg-dark"
+      className="relative py-24 bg-gradient-to-b from-secondary/30 to-dark overflow-hidden"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{ duration: 1 }}
     >
       {/* Animated background */}
-      <motion.div className="absolute inset-0 z-0" style={{ y }}>
-        {/* Gradient background */}
-        <div className="absolute inset-0 bg-gradient-to-br from-dark via-primary/10 to-accent/20"></div>
-
-        {/* Animated patterns */}
-        <div className="absolute inset-0 bg-grid-pattern opacity-20"></div>
-
-        {/* Floating orbs/circles */}
-        <div className="absolute top-1/4 left-1/4 w-64 h-64 rounded-full bg-primary/10 blur-3xl"></div>
-        <div className="absolute bottom-1/3 right-1/5 w-96 h-96 rounded-full bg-accent/10 blur-3xl"></div>
-        <motion.div
-          className="absolute top-1/2 left-2/3 w-40 h-40 rounded-full bg-secondary/20 blur-xl"
-          animate={{
-            y: [0, -20, 0],
-            opacity: [0.4, 0.7, 0.4],
-          }}
-          transition={{
-            duration: 5,
-            repeat: Infinity,
-            repeatType: "reverse",
-          }}
-        ></motion.div>
-      </motion.div>
+      <div className="absolute inset-0 z-0 opacity-10">
+        <div className="absolute inset-0 bg-gradient-to-r from-primary/30 to-accent/30"></div>
+        <div className="h-full w-full bg-grid-pattern"></div>
+      </div>
 
       {/* Content */}
-      <div className="container mx-auto px-6 relative z-10 h-full flex items-center">
+      <div className="container mx-auto px-4 sm:px-6 relative z-10 py-16 md:py-24 h-full flex items-center">
         <motion.div
-          className="max-w-2xl"
+          className="w-full max-w-2xl"
           variants={container}
           initial="hidden"
           animate="show"
@@ -91,35 +72,38 @@ export default function HeroSection() {
           </motion.div>
 
           <motion.h1
-            className="text-6xl md:text-7xl font-bold mb-4 bg-clip-text text-transparent bg-gradient-to-r from-light via-light to-light/80"
+            className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold mb-4 bg-clip-text text-transparent bg-gradient-to-r from-light via-light to-light/80"
             variants={item}
           >
             Connect With Us
           </motion.h1>
 
           <motion.div
-            className="h-1.5 w-40 bg-gradient-to-r from-primary to-accent rounded-full mb-8"
+            className="h-1.5 w-24 sm:w-40 bg-gradient-to-r from-primary to-accent rounded-full mb-6 sm:mb-8"
             variants={item}
           ></motion.div>
 
           <motion.p
-            className="text-xl text-light/90 max-w-xl mb-8"
+            className="text-base sm:text-lg md:text-xl text-light/90 max-w-xl mb-6 sm:mb-8"
             variants={item}
           >
             From booking inquiries to fan mail, we're here to listen. Reach out
             and let's create something extraordinary together.
           </motion.p>
 
-          <motion.div className="flex gap-4" variants={item}>
+          <motion.div
+            className="flex flex-col sm:flex-row gap-3 sm:gap-4"
+            variants={item}
+          >
             <a
               href="#booking-form"
-              className="px-6 py-3 bg-primary hover:bg-primary/90 text-light font-medium rounded-full transition-all transform hover:scale-105 flex items-center gap-2"
+              className="px-5 sm:px-6 py-3 bg-primary hover:bg-primary/90 text-light font-medium rounded-full transition-all transform hover:scale-105 flex items-center justify-center gap-2 text-center text-sm sm:text-base"
             >
               <svg
                 xmlns="http://www.w3.org/2000/svg"
                 viewBox="0 0 24 24"
                 fill="currentColor"
-                className="w-5 h-5"
+                className="w-4 h-4 sm:w-5 sm:h-5"
               >
                 <path
                   fillRule="evenodd"
@@ -137,13 +121,13 @@ export default function HeroSection() {
 
             <a
               href="#contact-management"
-              className="px-6 py-3 bg-dark/70 hover:bg-dark/50 text-light font-medium rounded-full transition-all transform hover:scale-105 border border-light/30 flex items-center gap-2"
+              className="px-5 sm:px-6 py-3 bg-dark/70 hover:bg-dark/50 text-light font-medium rounded-full transition-all transform hover:scale-105 border border-light/30 flex items-center justify-center gap-2 text-center text-sm sm:text-base"
             >
               <svg
                 xmlns="http://www.w3.org/2000/svg"
                 viewBox="0 0 24 24"
                 fill="currentColor"
-                className="w-5 h-5"
+                className="w-4 h-4 sm:w-5 sm:h-5"
               >
                 <path
                   fillRule="evenodd"
@@ -156,15 +140,6 @@ export default function HeroSection() {
           </motion.div>
         </motion.div>
       </div>
-
-      {/* Scroll indicator */}
-
-      <motion.div
-        variants={fadeInUp}
-        className="absolute bottom-8 left-0 right-0 flex justify-center z-50 "
-      >
-        <ScrollIndicator color="#ffffff" glowIntensity={10} />
-      </motion.div>
     </motion.section>
   );
 }

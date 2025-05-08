@@ -150,7 +150,6 @@ export default function HeroSection({ artistInfo }: HeroSectionProps) {
       >
         <ScrollIndicator color="#ffffff" glowIntensity={10} />
       </motion.div>{" "}
-      <ScrollIndicator color="#ffffff" glowIntensity={10} />
     </section>
   );
 }
