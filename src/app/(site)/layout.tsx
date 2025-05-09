@@ -6,11 +6,7 @@ import { PlayerProvider } from "@/context/PlayerContext";
 import { CartProvider } from "@/context/CartContext";
 import { SanityLive } from "@/sanity/lib/live";
 import dynamic from "next/dynamic";
-
-// Dynamic imports for heavy components
-const MusicPlayer = dynamic(() => import("@/components/music/MusicPlayer"), {
-  loading: () => null, // Don't show loading state for player as it's non-critical
-});
+import { MusicPlayerWrapper } from "@/components/music/MusicPlayerWrapper";
 
 const ShoppingCart = dynamic(() => import("@/components/store/ShoppingCart"), {
   ssr: true,
@@ -67,7 +63,7 @@ export default function RootLayout({
           <CartProvider>
             <Navbar />
             <main className="flex-grow pt-16 sm:pt-20">{children}</main>
-            <MusicPlayer />
+            <MusicPlayerWrapper />
             <ShoppingCart />
             <Footer />
           </CartProvider>

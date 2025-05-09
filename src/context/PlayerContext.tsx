@@ -7,6 +7,7 @@ import {
   ReactNode,
   useRef,
   useEffect,
+  useState,
 } from "react";
 import { Album, Track } from "@/data/music";
 import { urlFor, getAudioUrl } from "@/lib/sanity";
@@ -264,7 +265,7 @@ function getVolumeSettings(): number {
   return 0.7; // Default volume if not saved or error
 }
 
-// Try to load player state from localStorage during initialization
+// Helper function to safely load player state from localStorage during initialization
 function getSavedState(): Partial<PlayerState> {
   if (typeof window === "undefined") return {};
 
@@ -281,15 +282,53 @@ function getSavedState(): Partial<PlayerState> {
 }
 
 export function PlayerProvider({ children }: { children: ReactNode }) {
-  // Initialize state with saved values where available
-  const savedState = typeof window !== "undefined" ? getSavedState() : {};
-  const [state, dispatch] = useReducer(playerReducer, {
-    ...initialState,
-    ...savedState,
-  });
+  // Initialize state with saved values where available but only on the client
+  const [savedStateLoaded, setSavedStateLoaded] = useState(false);
+  const [state, dispatch] = useReducer(playerReducer, initialState);
 
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const playerMounted = useRef<boolean>(false);
+
+  // Load saved state from localStorage only on client side
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const savedState = getSavedState();
+      if (Object.keys(savedState).length > 0) {
+        // Update state with saved values
+        if (savedState.currentTrack) {
+          dispatch({
+            type: "PLAY",
+            payload: {
+              track: savedState.currentTrack,
+              album: savedState.currentAlbum,
+            },
+          });
+          if (!savedState.isPlaying) {
+            dispatch({ type: "PAUSE" });
+          }
+        }
+
+        if (savedState.volume !== undefined) {
+          dispatch({
+            type: "SET_VOLUME",
+            payload: { volume: savedState.volume },
+          });
+        }
+
+        if (savedState.isVisible) {
+          dispatch({ type: "SHOW_PLAYER" });
+        }
+
+        if (savedState.queue?.length) {
+          dispatch({
+            type: "SET_QUEUE",
+            payload: { tracks: savedState.queue },
+          });
+        }
+      }
+      setSavedStateLoaded(true);
+    }
+  }, []);
 
   // Effect to handle browser navigation events (back/forward buttons)
   useEffect(() => {

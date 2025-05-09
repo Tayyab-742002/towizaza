@@ -24,6 +24,7 @@ import { usePathname } from "next/navigation";
 import { Track } from "@/data/music";
 import Image from "next/image";
 import LazyImage from "@/components/common/LazyImage";
+import dynamic from "next/dynamic";
 
 // Define proper types for the audio player events
 interface AudioPlayerElement extends HTMLAudioElement {
@@ -315,6 +316,9 @@ export default function MusicPlayer() {
 
   // Check for data saver mode on initial load
   useEffect(() => {
+    // Safe check for browser environment
+    if (typeof window === "undefined") return;
+
     const checkDataSaverMode = () => {
       const onMobileData = isMobileDataConnection();
       const userPreference = localStorage.getItem("audioDataSaver");
