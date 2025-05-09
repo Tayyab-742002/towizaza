@@ -82,13 +82,6 @@ export default function Navbar() {
                     ? "text-primary"
                     : "text-light hover:text-primary"
                 }`}
-                onClick={(e) => {
-                  // Force navigation for problematic routes
-                  if (link.href === "/music" || link.href === "/store") {
-                    e.preventDefault();
-                    window.location.href = link.href;
-                  }
-                }}
               >
                 <span className="relative z-10">{link.label}</span>
                 <span className="absolute bottom-0 left-0 w-0 h-[2px] bg-primary group-hover:w-full transition-all duration-300 ease-in-out"></span>

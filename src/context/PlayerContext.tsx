@@ -1,8 +1,15 @@
 "use client";
 
-import { createContext, useContext, useReducer, ReactNode, useRef, useEffect } from 'react';
-import { Album, Track } from '@/data/music';
-import { urlFor, getAudioUrl } from '@/lib/sanity';
+import {
+  createContext,
+  useContext,
+  useReducer,
+  ReactNode,
+  useRef,
+  useEffect,
+} from "react";
+import { Album, Track } from "@/data/music";
+import { urlFor, getAudioUrl } from "@/lib/sanity";
 
 interface PlayerState {
   currentTrack: Track | null;
@@ -13,19 +20,23 @@ interface PlayerState {
   duration: number;
   isVisible: boolean;
   queue: Track[];
+  lastPlaybackTime: number;
 }
 
 type PlayerAction =
-  | { type: 'PLAY'; payload: { track: Track; album?: Album } }
-  | { type: 'PAUSE' }
-  | { type: 'RESUME' }
-  | { type: 'SET_PROGRESS'; payload: { progress: number } }
-  | { type: 'SET_DURATION'; payload: { duration: number } }
-  | { type: 'SET_VOLUME'; payload: { volume: number } }
-  | { type: 'TOGGLE_VISIBILITY' }
-  | { type: 'SET_QUEUE'; payload: { tracks: Track[] } }
-  | { type: 'NEXT_TRACK' }
-  | { type: 'PREV_TRACK' };
+  | { type: "PLAY"; payload: { track: Track; album?: Album } }
+  | { type: "PAUSE" }
+  | { type: "RESUME" }
+  | { type: "SET_PROGRESS"; payload: { progress: number } }
+  | { type: "SET_DURATION"; payload: { duration: number } }
+  | { type: "SET_VOLUME"; payload: { volume: number } }
+  | { type: "TOGGLE_VISIBILITY" }
+  | { type: "HIDE_PLAYER" }
+  | { type: "SHOW_PLAYER" }
+  | { type: "SET_QUEUE"; payload: { tracks: Track[] } }
+  | { type: "NEXT_TRACK" }
+  | { type: "PREV_TRACK" }
+  | { type: "SAVE_PLAYBACK_TIME"; payload: { time: number } };
 
 interface PlayerContextType {
   state: PlayerState;
@@ -35,6 +46,8 @@ interface PlayerContextType {
   seek: (progress: number) => void;
   setVolume: (volume: number) => void;
   toggleVisibility: () => void;
+  hidePlayer: () => void;
+  showPlayer: () => void;
   setQueue: (tracks: Track[]) => void;
   nextTrack: () => void;
   prevTrack: () => void;
@@ -43,6 +56,7 @@ interface PlayerContextType {
 
 const PlayerContext = createContext<PlayerContextType | undefined>(undefined);
 
+// Initialize with default values
 const initialState: PlayerState = {
   currentTrack: null,
   currentAlbum: null,
@@ -51,130 +65,159 @@ const initialState: PlayerState = {
   progress: 0,
   duration: 0,
   isVisible: false,
-  queue: []
+  queue: [],
+  lastPlaybackTime: 0,
 };
 
 function playerReducer(state: PlayerState, action: PlayerAction): PlayerState {
   switch (action.type) {
-    case 'PLAY':
+    case "PLAY":
       return {
         ...state,
         currentTrack: action.payload.track,
         currentAlbum: action.payload.album || null,
         isPlaying: true,
         progress: 0,
-        isVisible: true
+        isVisible: true, // Always show player when playing a track
       };
-    
-    case 'PAUSE':
+
+    case "PAUSE":
       return {
         ...state,
-        isPlaying: false
+        isPlaying: false,
       };
-    
-    case 'RESUME':
+
+    case "RESUME":
       return {
         ...state,
-        isPlaying: true
+        isPlaying: true,
+        isVisible: true, // Ensure player is visible when resuming
       };
-    
-    case 'SET_PROGRESS':
+
+    case "SET_PROGRESS":
       return {
         ...state,
-        progress: action.payload.progress
+        progress: action.payload.progress,
       };
-    
-    case 'SET_DURATION':
+
+    case "SET_DURATION":
       return {
         ...state,
-        duration: action.payload.duration
+        duration: action.payload.duration,
       };
-    
-    case 'SET_VOLUME':
+
+    case "SET_VOLUME":
       return {
         ...state,
-        volume: action.payload.volume
+        volume: action.payload.volume,
       };
-    
-    case 'TOGGLE_VISIBILITY':
+
+    case "TOGGLE_VISIBILITY":
       return {
         ...state,
-        isVisible: !state.isVisible
+        isVisible: !state.isVisible,
       };
-    
-    case 'SET_QUEUE':
+
+    case "HIDE_PLAYER":
       return {
         ...state,
-        queue: action.payload.tracks
+        isVisible: false,
       };
-    
-    case 'NEXT_TRACK': {
+
+    case "SHOW_PLAYER":
+      return {
+        ...state,
+        isVisible: true,
+      };
+
+    case "SET_QUEUE":
+      return {
+        ...state,
+        queue: action.payload.tracks,
+      };
+
+    case "SAVE_PLAYBACK_TIME":
+      return {
+        ...state,
+        lastPlaybackTime: action.payload.time,
+      };
+
+    case "NEXT_TRACK": {
       if (!state.currentTrack || state.queue.length === 0) return state;
-      
+
       // Find current track by id or by reference comparison if id is missing
-      const currentIndex = state.queue.findIndex(track => 
-        (track.id && state.currentTrack?.id) 
+      const currentIndex = state.queue.findIndex((track) =>
+        track.id && state.currentTrack?.id
           ? track.id === state.currentTrack.id
-          : (track._key && state.currentTrack?._key)
+          : track._key && state.currentTrack?._key
             ? track._key === state.currentTrack._key
             : track === state.currentTrack
       );
-      
+
       // If track not found in queue or it's the last track and we don't loop
-      if (currentIndex === -1 || (currentIndex === state.queue.length - 1 && state.queue.length === 1)) {
+      if (
+        currentIndex === -1 ||
+        (currentIndex === state.queue.length - 1 && state.queue.length === 1)
+      ) {
         return state;
       }
-      
+
       const nextIndex = (currentIndex + 1) % state.queue.length;
       const nextTrack = state.queue[nextIndex];
-      
+
       return {
         ...state,
         currentTrack: nextTrack,
         progress: 0,
-        isPlaying: true // Auto-play next track
+        isPlaying: true, // Auto-play next track
+        isVisible: true, // Ensure player is visible
       };
     }
-    
-    case 'PREV_TRACK': {
+
+    case "PREV_TRACK": {
       if (!state.currentTrack || state.queue.length === 0) return state;
-      
+
       // If we're more than 3 seconds in, just restart the current track
       if (state.progress > 3) {
         return {
           ...state,
-          progress: 0
+          progress: 0,
         };
       }
-      
+
       // Find current track by id or by reference comparison if id is missing
-      const currentIndex = state.queue.findIndex(track => 
-        (track.id && state.currentTrack?.id) 
+      const currentIndex = state.queue.findIndex((track) =>
+        track.id && state.currentTrack?.id
           ? track.id === state.currentTrack.id
-          : (track._key && state.currentTrack?._key)
+          : track._key && state.currentTrack?._key
             ? track._key === state.currentTrack._key
             : track === state.currentTrack
       );
-      
+
       // If track not found or it's the first track and we have only one track
-      if (currentIndex === -1 || (currentIndex === 0 && state.queue.length === 1)) {
+      if (
+        currentIndex === -1 ||
+        (currentIndex === 0 && state.queue.length === 1)
+      ) {
         return {
           ...state,
-          progress: 0 // Just restart the current track
+          progress: 0, // Just restart the current track
         };
       }
-      
-      const prevIndex = (currentIndex - 1 + state.queue.length) % state.queue.length;
+
+      const prevIndex =
+        (currentIndex - 1 + state.queue.length) % state.queue.length;
       const prevTrack = state.queue[prevIndex];
-      
+
       return {
         ...state,
         currentTrack: prevTrack,
         progress: 0,
-        isPlaying: true // Auto-play previous track
+        isPlaying: true, // Auto-play previous track
+        isVisible: true, // Ensure player is visible
       };
     }
-    
+
     default:
       return state;
   }
@@ -187,13 +230,107 @@ function getTrackAudioUrl(track: Track): string {
 
 // Helper function to check if a URL is an MP4 file
 function isMP4File(url: string): boolean {
-  return url.toLowerCase().endsWith('.mp4') || url.includes('.r2.dev/') && !url.match(/\.(mp3|wav|ogg|webm)$/i);
+  return (
+    url.toLowerCase().endsWith(".mp4") ||
+    (url.includes(".r2.dev/") && !url.match(/\.(mp3|wav|ogg|webm)$/i))
+  );
+}
+
+// Try to load player state from localStorage during initialization
+function getSavedState(): Partial<PlayerState> {
+  if (typeof window === "undefined") return {};
+
+  try {
+    const savedState = localStorage.getItem("playerState");
+    if (savedState) {
+      return JSON.parse(savedState);
+    }
+  } catch (error) {
+    console.error("Error loading player state from localStorage:", error);
+  }
+
+  return {};
 }
 
 export function PlayerProvider({ children }: { children: ReactNode }) {
-  const [state, dispatch] = useReducer(playerReducer, initialState);
+  // Initialize state with saved values where available
+  const savedState = typeof window !== "undefined" ? getSavedState() : {};
+  const [state, dispatch] = useReducer(playerReducer, {
+    ...initialState,
+    ...savedState,
+  });
+
   const audioRef = useRef<HTMLAudioElement | null>(null);
-  
+  const playerMounted = useRef<boolean>(false);
+
+  // Effect to handle browser navigation events (back/forward buttons)
+  useEffect(() => {
+    const handleRouteChange = () => {
+      // Save current state before navigation
+      if (state.currentTrack && state.isPlaying) {
+        console.log("Route change detected, preserving player state");
+
+        // Force player to remain visible during navigation
+        if (!state.isVisible) {
+          dispatch({ type: "SHOW_PLAYER" });
+        }
+      }
+    };
+
+    // Listen for navigation events in the Next.js app
+    window.addEventListener("beforeunload", handleRouteChange);
+
+    return () => {
+      window.removeEventListener("beforeunload", handleRouteChange);
+    };
+  }, [state.currentTrack, state.isPlaying, state.isVisible]);
+
+  // Handle player mount/unmount
+  useEffect(() => {
+    playerMounted.current = true;
+
+    // On first mount, restore playing state if needed
+    if (
+      state.currentTrack &&
+      state.isPlaying &&
+      typeof window !== "undefined"
+    ) {
+      console.log("Player mounted, restoring playback state");
+    }
+
+    return () => {
+      // Before unmount, save current playback time
+      if (audioRef.current && state.currentTrack) {
+        dispatch({
+          type: "SAVE_PLAYBACK_TIME",
+          payload: { time: audioRef.current.currentTime },
+        });
+      }
+      playerMounted.current = false;
+    };
+  }, []);
+
+  // Save state to localStorage when it changes
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      try {
+        // Only save essential state
+        const stateToSave = {
+          currentTrack: state.currentTrack,
+          currentAlbum: state.currentAlbum,
+          isPlaying: state.isPlaying,
+          volume: state.volume,
+          isVisible: state.isVisible,
+          queue: state.queue,
+          lastPlaybackTime: state.lastPlaybackTime,
+        };
+        localStorage.setItem("playerState", JSON.stringify(stateToSave));
+      } catch (error) {
+        console.error("Error saving player state to localStorage:", error);
+      }
+    }
+  }, [state]);
+
   // This effect coordinates with the external audio player
   useEffect(() => {
     // When the currentTrack changes, make sure we reset our state appropriately
@@ -203,57 +340,65 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       console.log("Track changed:", state.currentTrack.title);
     }
   }, [state.currentTrack]);
-  
+
   // Player actions
   const play = (track: Track, album?: Album) => {
     console.log("Play track:", track.title);
-    dispatch({ type: 'PLAY', payload: { track, album } });
-    
+    dispatch({ type: "PLAY", payload: { track, album } });
+
     // If album is provided, set queue to album tracks
     if (album && album.tracks && album.tracks.length > 0) {
-      const playableTracks = album.tracks.filter(t => !!getAudioUrl(t));
-      dispatch({ type: 'SET_QUEUE', payload: { tracks: playableTracks } });
+      const playableTracks = album.tracks.filter((t) => !!getAudioUrl(t));
+      dispatch({ type: "SET_QUEUE", payload: { tracks: playableTracks } });
     }
   };
-  
+
   const pause = () => {
     console.log("Pause");
-    dispatch({ type: 'PAUSE' });
+    dispatch({ type: "PAUSE" });
   };
-  
+
   const resume = () => {
     console.log("Resume");
-    dispatch({ type: 'RESUME' });
+    dispatch({ type: "RESUME" });
   };
-  
+
   const seek = (progress: number) => {
     console.log("Seek to:", progress);
     if (audioRef.current) {
       audioRef.current.currentTime = progress;
-      dispatch({ type: 'SET_PROGRESS', payload: { progress } });
+      dispatch({ type: "SET_PROGRESS", payload: { progress } });
     }
   };
-  
+
   const setVolume = (volume: number) => {
-    dispatch({ type: 'SET_VOLUME', payload: { volume } });
+    dispatch({ type: "SET_VOLUME", payload: { volume } });
   };
-  
+
   const toggleVisibility = () => {
-    dispatch({ type: 'TOGGLE_VISIBILITY' });
+    dispatch({ type: "TOGGLE_VISIBILITY" });
   };
-  
+
+  const hidePlayer = () => {
+    dispatch({ type: "HIDE_PLAYER" });
+  };
+
+  const showPlayer = () => {
+    dispatch({ type: "SHOW_PLAYER" });
+  };
+
   const setQueue = (tracks: Track[]) => {
-    dispatch({ type: 'SET_QUEUE', payload: { tracks } });
+    dispatch({ type: "SET_QUEUE", payload: { tracks } });
   };
-  
+
   const nextTrack = () => {
-    dispatch({ type: 'NEXT_TRACK' });
+    dispatch({ type: "NEXT_TRACK" });
   };
-  
+
   const prevTrack = () => {
-    dispatch({ type: 'PREV_TRACK' });
+    dispatch({ type: "PREV_TRACK" });
   };
-  
+
   const value = {
     state,
     play,
@@ -262,12 +407,14 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     seek,
     setVolume,
     toggleVisibility,
+    hidePlayer,
+    showPlayer,
     setQueue,
     nextTrack,
     prevTrack,
-    audioRef
+    audioRef,
   };
-  
+
   return (
     <PlayerContext.Provider value={value}>
       {/* Audio element is now handled by the react-h5-audio-player component */}
@@ -279,7 +426,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
 export function usePlayer() {
   const context = useContext(PlayerContext);
   if (context === undefined) {
-    throw new Error('usePlayer must be used within a PlayerProvider');
+    throw new Error("usePlayer must be used within a PlayerProvider");
   }
   return context;
-} 
+}

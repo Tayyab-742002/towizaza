@@ -6,6 +6,8 @@ import { urlFor } from "@/lib/sanity";
 import AudioPlayer from "react-h5-audio-player";
 import "react-h5-audio-player/lib/styles.css";
 import { getAudioUrl } from "@/lib/sanity";
+import { X } from "lucide-react";
+import { usePathname } from "next/navigation";
 
 // Define proper types for the audio player events
 interface AudioPlayerElement extends HTMLAudioElement {
@@ -24,8 +26,42 @@ export default function MusicPlayer() {
     prevTrack,
     setVolume,
     audioRef,
+    toggleVisibility,
   } = usePlayer();
   const playerRef = useRef<any>(null);
+  const pathname = usePathname();
+  const previousPath = useRef<string>(pathname);
+
+  // Track page navigation
+  useEffect(() => {
+    if (previousPath.current !== pathname) {
+      console.log(
+        `Navigation detected: ${previousPath.current} -> ${pathname}`
+      );
+
+      // When navigation happens and the player was playing, ensure it continues
+      if (state.isPlaying && playerRef.current?.audio?.current) {
+        // We need to ensure the audio element keeps playing during navigation
+        const currentAudio = playerRef.current.audio.current;
+
+        // Small delay to ensure the audio keeps playing after route change
+        setTimeout(() => {
+          if (state.isPlaying && !currentAudio.paused) {
+            console.log("Ensuring playback continues after navigation");
+          } else if (state.isPlaying && currentAudio.paused) {
+            console.log("Playback was interrupted, resuming...");
+            currentAudio
+              .play()
+              .catch((err: Error) =>
+                console.error("Failed to resume after navigation:", err)
+              );
+          }
+        }, 100);
+      }
+
+      previousPath.current = pathname;
+    }
+  }, [pathname, state.isPlaying]);
 
   // Force play when a track is loaded initially
   useEffect(() => {
@@ -55,6 +91,18 @@ export default function MusicPlayer() {
       }
     }
   }, [state.currentTrack, state.isPlaying, pause]);
+
+  // If the audio player element changes (e.g., after navigation), restore state
+  useEffect(() => {
+    if (playerRef.current?.audio?.current && audioRef.current) {
+      audioRef.current = playerRef.current.audio.current;
+
+      // If we have a saved playback time, restore it
+      if (state.lastPlaybackTime > 0) {
+        playerRef.current.audio.current.currentTime = state.lastPlaybackTime;
+      }
+    }
+  }, [playerRef.current, audioRef, state.lastPlaybackTime]);
 
   // Helper function to get album artwork URL
   const getArtworkUrl = () => {
@@ -107,8 +155,14 @@ export default function MusicPlayer() {
     }
   };
 
-  // If no current track, don't render player
-  if (!state.currentTrack) return null;
+  // Handle closing the player
+  const handleClose = () => {
+    pause(); // Pause the playback
+    toggleVisibility(); // Hide the player
+  };
+
+  // If no current track or player is not visible, don't render
+  if (!state.currentTrack || !state.isVisible) return null;
 
   // Get the audio URL
   const audioUrl = state.currentTrack ? getAudioUrl(state.currentTrack) : "";
@@ -189,9 +243,27 @@ export default function MusicPlayer() {
             />
           </div>
 
-          {/* Queue indicator - Only visible on desktop */}
-          <div className="hidden md:flex items-center gap-2 text-light/70">
+          {/* Queue indicator and Close button - Only visible on desktop */}
+          <div className="hidden md:flex items-center gap-4 text-light/70">
             <span className="text-xs">{trackPosition}</span>
+            <button
+              onClick={handleClose}
+              className="text-light/70 hover:text-light transition-colors rounded-full p-1 hover:bg-light/10"
+              aria-label="Close player"
+            >
+              <X size={20} />
+            </button>
+          </div>
+
+          {/* Close button - Only visible on mobile */}
+          <div className="md:hidden">
+            <button
+              onClick={handleClose}
+              className="text-light/70 hover:text-light transition-colors rounded-full p-1 hover:bg-light/10"
+              aria-label="Close player"
+            >
+              <X size={20} />
+            </button>
           </div>
         </div>
       </div>
