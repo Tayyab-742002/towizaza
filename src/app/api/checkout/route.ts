@@ -115,98 +115,6 @@ export async function POST(req: NextRequest) {
     };
     const sanityOrder = await createOrder(orderData);
 
-    // Create a Checkout Session with prefilled customer information
-    // const session = await stripe.checkout.sessions.create({
-    //   payment_method_types: ["card"],
-    //   line_items: lineItems,
-    //   mode: "payment",
-    //   success_url: `${process.env.NEXT_PUBLIC_SITE_URL}/checkout/success?session_id={CHECKOUT_SESSION_ID}`,
-    //   cancel_url: `${process.env.NEXT_PUBLIC_SITE_URL}/checkout/canceled`,
-
-    //   // Pre-fill customer information
-    //   customer_email: customerInfo.email,
-
-    //   // Enable phone collection and pre-fill if available
-    //   phone_number_collection: {
-    //     enabled: true,
-    //   },
-
-    //   // Configure shipping options and address collection
-    //   shipping_address_collection: {
-    //     allowed_countries: ["US", "CA", "GB", "AU"],
-    //   },
-
-    //   // Pre-fill shipping details using customer_details
-    //   customer_details: {
-    //     name: customerInfo.name,
-    //     email: customerInfo.email,
-    //     phone: customerInfo.phone || undefined,
-    //     address: {
-    //       line1: customerInfo.address.line1 || undefined,
-    //       line2: undefined, // Add this if you collect line2 in your form
-    //       city: customerInfo.address.city || undefined,
-    //       state: customerInfo.address.state || undefined,
-    //       postal_code: customerInfo.address.postalCode || undefined,
-    //       country: customerInfo.address.country || "US",
-    //     },
-    //   },
-
-    //   shipping_options: [
-    //     {
-    //       shipping_rate_data: {
-    //         type: "fixed_amount",
-    //         fixed_amount: {
-    //           amount: 500, // $5.00
-    //           currency: "usd",
-    //         },
-    //         display_name: "Standard Shipping",
-    //         delivery_estimate: {
-    //           minimum: {
-    //             unit: "business_day",
-    //             value: 5,
-    //           },
-    //           maximum: {
-    //             unit: "business_day",
-    //             value: 10,
-    //           },
-    //         },
-    //       },
-    //     },
-    //     {
-    //       shipping_rate_data: {
-    //         type: "fixed_amount",
-    //         fixed_amount: {
-    //           amount: 1500, // $15.00
-    //           currency: "usd",
-    //         },
-    //         display_name: "Express Shipping",
-    //         delivery_estimate: {
-    //           minimum: {
-    //             unit: "business_day",
-    //             value: 2,
-    //           },
-    //           maximum: {
-    //             unit: "business_day",
-    //             value: 3,
-    //           },
-    //         },
-    //       },
-    //     },
-    //   ],
-
-    //   // Store additional metadata for reference
-    //   metadata: {
-    //     orderId: orderId,
-    //     customerName: customerInfo.name,
-    //     customerEmail: customerInfo.email,
-    //     customerPhone: customerInfo.phone,
-    //     line1: customerInfo.address.line1,
-    //     city: customerInfo.address.city,
-    //     state: customerInfo.address.state,
-    //     postalCode: customerInfo.address.postalCode,
-    //     country: customerInfo.address.country,
-    //   },
-    // });
     // Create a Stripe Customer
     const customer = await stripe.customers.create({
       email: customerInfo.email,
@@ -238,7 +146,7 @@ export async function POST(req: NextRequest) {
       payment_method_types: ["card"],
       line_items: lineItems,
       mode: "payment",
-      success_url: `${process.env.NEXT_PUBLIC_SITE_URL}/checkout/success?session_id={CHECKOUT_SESSION_ID}`,
+      success_url: `${process.env.NEXT_PUBLIC_SITE_URL}/checkout/success?token=${orderId}`,
       cancel_url: `${process.env.NEXT_PUBLIC_SITE_URL}/checkout/canceled`,
       shipping_address_collection: {
         allowed_countries: ["US", "CA", "GB", "AU"],

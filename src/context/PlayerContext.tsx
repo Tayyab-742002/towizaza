@@ -363,9 +363,13 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     // When the currentTrack changes, make sure we reset our state appropriately
     if (state.currentTrack) {
-      // The audio element from react-h5-audio-player will handle the actual audio
-      // Our audioRef is just for tracking state now
-      console.log("Track changed:", state.currentTrack.title);
+      // Use setTimeout to ensure console.log doesn't happen during render
+      // This prevents console logging during the render cycle
+      setTimeout(() => {
+        // The audio element from react-h5-audio-player will handle the actual audio
+        // Our audioRef is just for tracking state now
+        console.log("Track changed:", state.currentTrack.title);
+      }, 0);
     }
   }, [state.currentTrack]);
 

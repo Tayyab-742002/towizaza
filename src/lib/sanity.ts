@@ -322,3 +322,19 @@ export async function getOrderByCheckoutId(checkoutId: string) {
     throw error;
   }
 }
+
+export async function getOrderByOrderId(orderId: string) {
+  try {
+    const result = await client.fetch(
+      `*[_type == "order" && orderId == $orderId][0]`,
+      {
+        orderId,
+      }
+    );
+
+    return result;
+  } catch (error) {
+    console.error("Error fetching order by order ID:", error);
+    throw error;
+  }
+}
