@@ -29,23 +29,23 @@ export function urlFor(source: any) {
 async function cachedFetch(query: string, params?: any) {
   // Create a cache key from the query and params
   const cacheKey = JSON.stringify({ query, params })
-  
+
   // Check if we have a valid cache entry
   const cached = queryCache.get(cacheKey)
   const now = Date.now()
-  
+
   if (cached && (now - cached.timestamp < CACHE_EXPIRY)) {
     console.log('Cache hit:', query.substring(0, 60) + '...')
     return cached.data
   }
-  
+
   // No cache hit, fetch from Sanity
   console.log('Cache miss, fetching from Sanity:', query.substring(0, 60) + '...')
   const data = await client.fetch(query, params)
-  
+
   // Store in cache
   queryCache.set(cacheKey, { data, timestamp: now })
-  
+
   return data
 }
 
@@ -65,7 +65,7 @@ export async function getProductBySlug(slug: string) {
     `*[_type == "product" && slug.current == $slug][0]{
       ...,
       "relatedProducts": relatedProducts[]->
-    }`, 
+    }`,
     { slug }
   )
 }
@@ -79,7 +79,7 @@ export async function getMusic() {
 export async function getFeaturedMusic() {
   // Get music that is featured but not upcoming
   const musicQuery = `*[_type == "music" && featured == true && (upcoming != true || !defined(upcoming))] | order(releaseDate desc)[0...4]`;
-  
+
   try {
     const music = await cachedFetch(musicQuery);
     return music || [];
@@ -109,65 +109,143 @@ export async function getArtistInfo() {
   return cachedFetch(`*[_type == "artist"][0]`)
 }
 
-// Helper function to safely get audio URL from various sources
-export function getAudioUrl(track: Track): string {
+// Helper function to safely get audio URL from various sources with optimizations
+export function getAudioUrl(track: Track, options?: { quality?: 'low' | 'medium' | 'high', dataSaver?: boolean }): string {
+  const { quality = 'high', dataSaver = false } = options || {};
+
+  // Check if in data saver mode - return lower quality by default
+  const effectiveQuality = dataSaver ? 'low' : quality;
+
   // First try external URL (Cloudflare)
   if (track.externalUrl) {
-    // Check if the URL is a direct reference to Cloudflare R2 without extension
-    if (track.externalUrl.includes('.r2.dev/') && 
-        !track.externalUrl.match(/\.(mp3|mp4|wav|ogg|webm)$/i)) {
-      // If it's an R2 URL without extension, try to infer it's MP4
-      return `${track.externalUrl}`;
+    // Enhanced URL handling for R2/Cloudflare
+    if (track.externalUrl.includes('.r2.dev/')) {
+      const baseUrl = track.externalUrl.split('?')[0]; // Remove any existing query params
+
+      // Add query parameters for optimized delivery based on quality
+      if (effectiveQuality === 'low') {
+        return `${baseUrl}?quality=low`;
+      } else if (effectiveQuality === 'medium') {
+        return `${baseUrl}?quality=medium`;
+      }
+
+      // For high quality, return the original URL
+      return track.externalUrl;
     }
+
     return track.externalUrl;
   }
-  
-  // Then try Sanity asset
+
+  // Then try Sanity asset with quality options
   if (track.previewUrl && typeof track.previewUrl === 'object' && track.previewUrl.asset) {
     try {
+      let baseUrl = '';
+
       // Handle MP3 files
       if (track.previewUrl.asset._ref.includes('-mp3')) {
-        return `https://cdn.sanity.io/files/${process.env.NEXT_PUBLIC_SANITY_PROJECT_ID}/${process.env.NEXT_PUBLIC_SANITY_DATASET}/${track.previewUrl.asset._ref.replace('file-', '').replace('-mp3', '.mp3')}`;
+        baseUrl = `https://cdn.sanity.io/files/${process.env.NEXT_PUBLIC_SANITY_PROJECT_ID}/${process.env.NEXT_PUBLIC_SANITY_DATASET}/${track.previewUrl.asset._ref.replace('file-', '').replace('-mp3', '.mp3')}`;
       }
       // Handle MP4 files
       else if (track.previewUrl.asset._ref.includes('-mp4')) {
-        return `https://cdn.sanity.io/files/${process.env.NEXT_PUBLIC_SANITY_PROJECT_ID}/${process.env.NEXT_PUBLIC_SANITY_DATASET}/${track.previewUrl.asset._ref.replace('file-', '').replace('-mp4', '.mp4')}`;
+        baseUrl = `https://cdn.sanity.io/files/${process.env.NEXT_PUBLIC_SANITY_PROJECT_ID}/${process.env.NEXT_PUBLIC_SANITY_DATASET}/${track.previewUrl.asset._ref.replace('file-', '').replace('-mp4', '.mp4')}`;
       }
-      // Other file types would be handled similarly
+
+      // Add quality parameters for CDN-based optimization
+      if (baseUrl) {
+        if (effectiveQuality === 'low') {
+          return `${baseUrl}?dl=low-quality`;
+        } else if (effectiveQuality === 'medium') {
+          return `${baseUrl}?dl=medium-quality`;
+        }
+        return baseUrl;
+      }
     } catch (error) {
       console.error("Error creating Sanity audio URL:", error);
     }
   }
-  
+
   // Then try URL string
   if (typeof track.previewUrl === 'string') {
     return track.previewUrl;
   }
-  
+
   // Return empty string if no valid URL found
   return '';
+}
+
+// Function to detect if user might be on mobile data connection
+export function isMobileDataConnection(): boolean {
+  if (typeof navigator === 'undefined') return false;
+
+  const connection = (navigator as any).connection ||
+                    (navigator as any).mozConnection ||
+                    (navigator as any).webkitConnection;
+
+  if (connection) {
+    // If we can detect connection type directly
+    if (connection.type === 'cellular' || connection.effectiveType === 'slow-2g' ||
+        connection.effectiveType === '2g' || connection.effectiveType === '3g') {
+      return true;
+    }
+
+    // If the connection has a saveData property
+    if (connection.saveData) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+// Preload audio file - useful for playlist preparation
+export function preloadAudioFile(audioUrl: string): void {
+  if (!audioUrl || typeof window === 'undefined') return;
+
+  const link = document.createElement('link');
+  link.rel = 'preload';
+  link.as = 'audio';
+  link.href = audioUrl;
+  document.head.appendChild(link);
+}
+
+// Preload the next track in a queue to improve playback transition
+export function preloadNextTrack(currentTrack: Track, queue: Track[]): void {
+  if (!queue?.length || typeof window === 'undefined') return;
+
+  const currentIndex = queue.findIndex(track =>
+    (track.id && currentTrack.id && track.id === currentTrack.id) ||
+    (track._key && currentTrack._key && track._key === currentTrack._key) ||
+    false
+  );
+
+  // If we found the current track and there's a next track
+  if (currentIndex !== -1 && currentIndex < queue.length - 1) {
+    const nextTrack = queue[currentIndex + 1];
+    const audioUrl = getAudioUrl(nextTrack);
+    preloadAudioFile(audioUrl);
+  }
 }
 
 // Function to fetch upcoming songs
 export async function getUpcomingSongs() {
   console.log("Fetching upcoming songs...");
-  
+
   const query = `*[_type == "upcomingSong"] | order(releaseDate asc)`;
-  
+
   try {
     const upcomingSongs = await cachedFetch(query);
-    
+
     if (!upcomingSongs || upcomingSongs.length === 0) {
       console.log("No upcoming songs found in Sanity, returning fallback data");
       // Import dynamically and use type assertion for fallback data
       const { musicCatalog } = await import('@/data/music');
       return musicCatalog.filter((item) => item.upcoming && item.featured);
     }
-    
+
     return upcomingSongs;
   } catch (error) {
     console.error("Error fetching upcoming songs:", error);
-    
+
     // Import dynamically and use type assertion for fallback data
     const { musicCatalog } = await import('@/data/music');
     return musicCatalog.filter((item) => item.upcoming && item.featured);
@@ -178,4 +256,4 @@ export async function getUpcomingSongs() {
 export function clearSanityCache() {
   queryCache.clear();
   console.log('Sanity cache cleared');
-} 
+}

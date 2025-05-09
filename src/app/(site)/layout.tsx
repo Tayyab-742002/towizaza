@@ -3,11 +3,22 @@ import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import Navbar from "@/components/common/Navbar";
 import { PlayerProvider } from "@/context/PlayerContext";
-import MusicPlayer from "@/components/music/MusicPlayer";
-import Footer from "@/components/common/Footer";
 import { CartProvider } from "@/context/CartContext";
-import ShoppingCart from "@/components/store/ShoppingCart";
 import { SanityLive } from "@/sanity/lib/live";
+import dynamic from "next/dynamic";
+
+// Dynamic imports for heavy components
+const MusicPlayer = dynamic(() => import("@/components/music/MusicPlayer"), {
+  loading: () => null, // Don't show loading state for player as it's non-critical
+});
+
+const ShoppingCart = dynamic(() => import("@/components/store/ShoppingCart"), {
+  ssr: true,
+});
+
+const Footer = dynamic(() => import("@/components/common/Footer"), {
+  ssr: true,
+});
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -56,9 +67,9 @@ export default function RootLayout({
           <CartProvider>
             <Navbar />
             <main className="flex-grow pt-16 sm:pt-20">{children}</main>
-            <Footer />
             <MusicPlayer />
             <ShoppingCart />
+            <Footer />
           </CartProvider>
         </PlayerProvider>
       </body>

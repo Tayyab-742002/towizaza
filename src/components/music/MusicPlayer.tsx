@@ -1,11 +1,15 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, lazy, Suspense } from "react";
 import { usePlayer } from "@/context/PlayerContext";
 import { urlFor } from "@/lib/sanity";
 import AudioPlayer, { RHAP_UI } from "react-h5-audio-player";
 import "react-h5-audio-player/lib/styles.css";
-import { getAudioUrl } from "@/lib/sanity";
+import {
+  getAudioUrl,
+  isMobileDataConnection,
+  preloadNextTrack,
+} from "@/lib/sanity";
 import {
   X,
   SkipBack,
@@ -18,6 +22,8 @@ import {
 } from "lucide-react";
 import { usePathname } from "next/navigation";
 import { Track } from "@/data/music";
+import Image from "next/image";
+import LazyImage from "@/components/common/LazyImage";
 
 // Define proper types for the audio player events
 interface AudioPlayerElement extends HTMLAudioElement {
@@ -131,13 +137,15 @@ const MobilePlayerControls = ({
         <div className="flex items-center gap-2 overflow-hidden">
           <div className="w-8 h-8 rounded overflow-hidden flex-shrink-0 bg-dark/50">
             {currentAlbum?.artwork && (
-              <img
+              <Image
                 src={
                   typeof currentAlbum.artwork === "string"
                     ? currentAlbum.artwork
                     : urlFor(currentAlbum.artwork).url()
                 }
                 alt={currentAlbum.title || "Album art"}
+                width={32}
+                height={32}
                 className="w-full h-full object-cover"
               />
             )}
@@ -303,6 +311,36 @@ export default function MusicPlayer() {
   const playerRef = useRef<any>(null);
   const pathname = usePathname();
   const previousPath = useRef<string>(pathname);
+  const [dataSaverMode, setDataSaverMode] = useState(false);
+
+  // Check for data saver mode on initial load
+  useEffect(() => {
+    const checkDataSaverMode = () => {
+      const onMobileData = isMobileDataConnection();
+      const userPreference = localStorage.getItem("audioDataSaver");
+
+      // If there's a saved preference, use that
+      if (userPreference !== null) {
+        setDataSaverMode(userPreference === "true");
+      } else {
+        // Otherwise use the detected connection type
+        setDataSaverMode(onMobileData);
+      }
+    };
+
+    checkDataSaverMode();
+
+    // Listen for online events to adjust quality when connection changes
+    window.addEventListener("online", checkDataSaverMode);
+    return () => window.removeEventListener("online", checkDataSaverMode);
+  }, []);
+
+  // Save data saver preference when changed
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      localStorage.setItem("audioDataSaver", dataSaverMode.toString());
+    }
+  }, [dataSaverMode]);
 
   // Track page navigation
   useEffect(() => {
@@ -334,6 +372,13 @@ export default function MusicPlayer() {
       previousPath.current = pathname;
     }
   }, [pathname, state.isPlaying]);
+
+  // Preload next track when current track changes
+  useEffect(() => {
+    if (state.currentTrack && state.queue.length > 0 && !dataSaverMode) {
+      preloadNextTrack(state.currentTrack, state.queue);
+    }
+  }, [state.currentTrack, state.queue, dataSaverMode]);
 
   // Force play when a track is loaded initially
   useEffect(() => {
@@ -461,8 +506,13 @@ export default function MusicPlayer() {
   // If no current track or player is not visible, don't render
   if (!state.currentTrack || !state.isVisible) return null;
 
-  // Get the audio URL
-  const audioUrl = state.currentTrack ? getAudioUrl(state.currentTrack) : "";
+  // Get the audio URL with quality based on data saver mode
+  const audioUrl = state.currentTrack
+    ? getAudioUrl(state.currentTrack, {
+        quality: dataSaverMode ? "low" : "high",
+        dataSaver: dataSaverMode,
+      })
+    : "";
 
   // Get current track position in queue
   const currentIndex = getCurrentTrackIndex();
@@ -478,10 +528,13 @@ export default function MusicPlayer() {
             <div className="flex items-center gap-2 sm:gap-3">
               <div className="w-10 h-10 sm:w-12 sm:h-12 bg-mid/20 rounded-md overflow-hidden flex-shrink-0">
                 {state.currentAlbum?.artwork && (
-                  <img
-                    src={getArtworkUrl()}
+                  <LazyImage
+                    src={state.currentAlbum.artwork}
                     alt={state.currentAlbum.title}
+                    width={48}
+                    height={48}
                     className="w-full h-full object-cover"
+                    lowQuality={true}
                   />
                 )}
               </div>
@@ -494,6 +547,21 @@ export default function MusicPlayer() {
                   {state.currentAlbum?.title || "Unknown Album"}
                 </p>
               </div>
+            </div>
+
+            {/* Data saver toggle (desktop only) */}
+            <div className="ml-2 hidden md:flex items-center gap-1">
+              <button
+                onClick={() => setDataSaverMode(!dataSaverMode)}
+                className={`text-xs px-2 py-1 rounded ${
+                  dataSaverMode
+                    ? "bg-primary/20 text-primary"
+                    : "bg-light/5 text-light/60 hover:text-light/80"
+                } transition-colors`}
+                aria-label={dataSaverMode ? "Data saver on" : "Data saver off"}
+              >
+                {dataSaverMode ? "Data Saver: ON" : "Data Saver: OFF"}
+              </button>
             </div>
 
             {/* Close button - Visible on desktop */}

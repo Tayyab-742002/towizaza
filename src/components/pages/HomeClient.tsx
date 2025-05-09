@@ -1,17 +1,59 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from "react";
-import { getFeaturedMusic, getFeaturedProducts, getUpcomingSongs, getArtistInfo } from '@/lib/sanity';
-import { fallbackMusic, fallbackProducts, fallbackArtistInfo } from '@/lib/fallbackData';
-
-// Import all section components
-import HeroSection from "@/components/home/HeroSection";
-import LatestReleasesSection from "@/components/home/LatestReleasesSection";
-import UpcomingReleasesSection from "@/components/home/UpcomingReleasesSection";
-import TestimonialsSection from "@/components/home/TestimonialsSection";
-import NewsletterSection from "@/components/home/NewsletterSection";
-import FeaturedMerchSection from "@/components/home/FeaturedMerchSection";
+import { useState, useEffect, Suspense } from "react";
+import {
+  getFeaturedMusic,
+  getFeaturedProducts,
+  getUpcomingSongs,
+  getArtistInfo,
+} from "@/lib/sanity";
+import {
+  fallbackMusic,
+  fallbackProducts,
+  fallbackArtistInfo,
+} from "@/lib/fallbackData";
 import { Loading } from "../common/Loading";
+import dynamic from "next/dynamic";
+
+// Import the critical hero section normally
+import HeroSection from "@/components/home/HeroSection";
+
+// Dynamically import less critical sections
+const LatestReleasesSection = dynamic(
+  () => import("@/components/home/LatestReleasesSection"),
+  { ssr: true, loading: () => <SectionPlaceholder /> }
+);
+
+const UpcomingReleasesSection = dynamic(
+  () => import("@/components/home/UpcomingReleasesSection"),
+  { ssr: true, loading: () => <SectionPlaceholder /> }
+);
+
+const TestimonialsSection = dynamic(
+  () => import("@/components/home/TestimonialsSection"),
+  { ssr: true, loading: () => <SectionPlaceholder /> }
+);
+
+const NewsletterSection = dynamic(
+  () => import("@/components/home/NewsletterSection"),
+  { ssr: true, loading: () => <SectionPlaceholder /> }
+);
+
+const FeaturedMerchSection = dynamic(
+  () => import("@/components/home/FeaturedMerchSection"),
+  { ssr: true, loading: () => <SectionPlaceholder /> }
+);
+
+// Simple placeholder for loading sections
+function SectionPlaceholder() {
+  return (
+    <section className="py-20 bg-dark">
+      <div className="container mx-auto px-6">
+        <div className="w-full h-64 bg-dark/50 animate-pulse rounded-lg"></div>
+      </div>
+    </section>
+  );
+}
 
 export default function HomeClient() {
   const [featuredData, setFeaturedData] = useState<{
@@ -23,7 +65,7 @@ export default function HomeClient() {
     music: [],
     products: [],
     upcomingSongs: [],
-    artistInfo: null
+    artistInfo: null,
   });
   const [loading, setLoading] = useState(true);
 
@@ -36,62 +78,78 @@ export default function HomeClient() {
           getFeaturedMusic(),
           getFeaturedProducts(),
           getUpcomingSongs(),
-          getArtistInfo()
+          getArtistInfo(),
         ]);
-        
+
         // Set default data if API returns empty
-        let musicData = music?.length > 0 
-          ? music 
-          : fallbackMusic.filter(item => item.featured && !item.upcoming);
-        
+        let musicData =
+          music?.length > 0
+            ? music
+            : fallbackMusic.filter((item) => item.featured && !item.upcoming);
+
         setFeaturedData({
           music: musicData,
-          products: products?.length > 0 ? products : fallbackProducts.filter(item => item.featured),
+          products:
+            products?.length > 0
+              ? products
+              : fallbackProducts.filter((item) => item.featured),
           upcomingSongs: upcomingSongs || [],
-          artistInfo: artistInfo || fallbackArtistInfo
+          artistInfo: artistInfo || fallbackArtistInfo,
         });
       } catch (error) {
-        console.error('Error fetching featured data:', error);
+        console.error("Error fetching featured data:", error);
         // Fallback to mock data in case of error
         setFeaturedData({
-          music: fallbackMusic.filter(item => item.featured && !item.upcoming),
-          products: fallbackProducts.filter(item => item.featured),
-          upcomingSongs: fallbackMusic.filter(item => item.upcoming && item.featured),
-          artistInfo: fallbackArtistInfo
+          music: fallbackMusic.filter(
+            (item) => item.featured && !item.upcoming
+          ),
+          products: fallbackProducts.filter((item) => item.featured),
+          upcomingSongs: fallbackMusic.filter(
+            (item) => item.upcoming && item.featured
+          ),
+          artistInfo: fallbackArtistInfo,
         });
       } finally {
         setLoading(false);
       }
     }
-    
+
     fetchData();
   }, []);
-  
+
   if (loading) {
-    return (
-     <Loading message="Please Wait..."/>
-    );
+    return <Loading message="Please Wait..." />;
   }
-  
+
   return (
-    <div className="min-h-screen flex flex-col">
-      {/* Hero Section */}
+    <main>
+      {/* Critical above-the-fold content */}
       <HeroSection artistInfo={featuredData.artistInfo} />
-      
-      {/* Latest Releases Section */}
-      <LatestReleasesSection music={featuredData.music} />
-      
-      {/* Upcoming Releases Section */}
-      <UpcomingReleasesSection upcomingSongs={featuredData.upcomingSongs} />
-      
-      {/* Testimonials Section */}
-      <TestimonialsSection />
-      
-      {/* Newsletter Section */}
-      <NewsletterSection />
-      
-      {/* Featured Merch Section */}
-      <FeaturedMerchSection products={featuredData.products} />
-    </div>
+
+      {/* Less critical sections */}
+      <Suspense fallback={<SectionPlaceholder />}>
+        <LatestReleasesSection music={featuredData.music} />
+      </Suspense>
+
+      {featuredData.upcomingSongs.length > 0 && (
+        <Suspense fallback={<SectionPlaceholder />}>
+          <UpcomingReleasesSection upcomingSongs={featuredData.upcomingSongs} />
+        </Suspense>
+      )}
+
+      <Suspense fallback={<SectionPlaceholder />}>
+        <TestimonialsSection />
+      </Suspense>
+
+      {featuredData.products.length > 0 && (
+        <Suspense fallback={<SectionPlaceholder />}>
+          <FeaturedMerchSection products={featuredData.products} />
+        </Suspense>
+      )}
+
+      <Suspense fallback={<SectionPlaceholder />}>
+        <NewsletterSection />
+      </Suspense>
+    </main>
   );
-} 
+}
