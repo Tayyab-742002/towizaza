@@ -7,6 +7,7 @@ import { urlFor, getAudioUrl } from "@/lib/sanity";
 import { usePlayer } from "@/context/PlayerContext";
 import { Album, Track } from "@/data/music";
 import { motion } from "framer-motion";
+import { Loader2 } from "lucide-react";
 
 interface MusicCardProps {
   album: Album;
@@ -22,6 +23,7 @@ export default function MusicCard({
   const { play, pause, resume, state, setQueue } = usePlayer();
   const [isHovering, setIsHovering] = useState(false);
   const [isImageLoaded, setIsImageLoaded] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
   // Get all playable tracks for the album
   const playableTracks = album.tracks.filter((track) => !!getAudioUrl(track));
@@ -42,6 +44,13 @@ export default function MusicCard({
       (state.currentAlbum.title === album.title &&
         state.currentAlbum.type === album.type));
 
+  // Reset loading state when album changes or playback changes
+  useEffect(() => {
+    if (isCurrentAlbum) {
+      setIsLoading(false);
+    }
+  }, [isCurrentAlbum, state.isPlaying]);
+
   const handlePlay = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
@@ -56,9 +65,17 @@ export default function MusicCard({
         resume();
       }
     } else {
+      // Show loading state while audio is being loaded
+      setIsLoading(true);
+
       // Play the first track of this album and set queue
       play(playableTracks[0], album);
       setQueue(playableTracks);
+
+      // If loading takes too long, automatically clear loading state after 3 seconds
+      setTimeout(() => {
+        setIsLoading(false);
+      }, 3000);
     }
   };
 
@@ -132,23 +149,36 @@ export default function MusicCard({
         {/* Play button overlay */}
         <div
           className={`absolute inset-0 bg-gradient-to-t from-dark/80 via-dark/40 to-transparent flex items-center justify-center transition-all duration-300 ${
-            isHovering || (isCurrentAlbum && state.isPlaying)
+            isHovering || (isCurrentAlbum && state.isPlaying) || isLoading
               ? "opacity-100"
               : "opacity-0"
           }`}
-          onClick={hasPlayableTracks ? handlePlay : undefined}
-          style={{ cursor: hasPlayableTracks ? "pointer" : "default" }}
+          onClick={hasPlayableTracks && !isLoading ? handlePlay : undefined}
+          style={{
+            cursor: hasPlayableTracks && !isLoading ? "pointer" : "default",
+          }}
         >
           {hasPlayableTracks && (
             <button
               type="button"
-              onClick={hasPlayableTracks ? handlePlay : undefined}
-              className="w-16 h-16 rounded-full bg-primary/90 hover:bg-primary flex items-center justify-center transform transition-all duration-300 shadow-xl"
+              onClick={hasPlayableTracks && !isLoading ? handlePlay : undefined}
+              className={`w-16 h-16 rounded-full ${
+                isLoading
+                  ? "bg-dark/70 border-2 border-primary/50"
+                  : "bg-primary/90 hover:bg-primary"
+              } flex items-center justify-center transform transition-all duration-300 shadow-xl`}
               aria-label={
-                isCurrentAlbum && state.isPlaying ? "Pause" : "Play Album"
+                isLoading
+                  ? "Loading..."
+                  : isCurrentAlbum && state.isPlaying
+                    ? "Pause"
+                    : "Play Album"
               }
+              disabled={isLoading}
             >
-              {isCurrentAlbum && state.isPlaying ? (
+              {isLoading ? (
+                <Loader2 className="w-8 h-8 text-primary animate-spin" />
+              ) : isCurrentAlbum && state.isPlaying ? (
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
                   viewBox="0 0 24 24"
@@ -184,10 +214,20 @@ export default function MusicCard({
           {album.type.charAt(0).toUpperCase() + album.type.slice(1)}
         </div>
 
-        {/* "Now Playing" indicator */}
-        {isCurrentAlbum && (
-          <div className="absolute top-2 right-2 bg-primary text-light text-xs font-bold py-1 px-2 rounded-full animate-pulse shadow-lg">
-            {state.isPlaying ? "Now Playing" : "Paused"}
+        {/* "Now Playing" or "Loading" indicator */}
+        {(isCurrentAlbum || isLoading) && (
+          <div
+            className={`absolute top-2 right-2 ${
+              isLoading ? "bg-secondary/60" : "bg-primary"
+            } text-light text-xs font-bold py-1 px-2 rounded-full ${
+              !isLoading && "animate-pulse"
+            } shadow-lg`}
+          >
+            {isLoading
+              ? "Loading..."
+              : state.isPlaying
+                ? "Now Playing"
+                : "Paused"}
           </div>
         )}
       </div>
@@ -219,9 +259,19 @@ export default function MusicCard({
             {hasPlayableTracks && (
               <button
                 onClick={handlePlay}
-                className="flex-1 py-2 px-3 bg-primary/90 hover:bg-primary text-light text-sm font-medium rounded-md transition-colors duration-200 flex items-center justify-center gap-1"
+                disabled={isLoading}
+                className={`flex-1 py-2 px-3 ${
+                  isLoading
+                    ? "bg-dark/50 cursor-not-allowed"
+                    : "bg-primary/90 hover:bg-primary cursor-pointer"
+                } text-light text-sm font-medium rounded-md transition-colors duration-200 flex items-center justify-center gap-1`}
               >
-                {isCurrentAlbum && state.isPlaying ? (
+                {isLoading ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <span>Loading...</span>
+                  </>
+                ) : isCurrentAlbum && state.isPlaying ? (
                   <>
                     <svg
                       xmlns="http://www.w3.org/2000/svg"

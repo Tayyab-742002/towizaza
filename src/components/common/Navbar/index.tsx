@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useCart } from "@/context/CartContext";
+import { usePlayer } from "@/context/PlayerContext";
 import { motion, AnimatePresence } from "framer-motion";
 
 export default function Navbar() {
@@ -11,6 +12,7 @@ export default function Navbar() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const pathname = usePathname();
   const { toggleCart, totalItems } = useCart();
+  const { toggleVisibility, showPlayer, state } = usePlayer();
 
   // Handle scroll effect
   useEffect(() => {
@@ -90,7 +92,12 @@ export default function Navbar() {
 
             {/* Music Player Toggle Button */}
             <button
-              className="bg-dark/40 p-2.5 rounded-full hover:bg-primary/20 hover:text-primary transition-all duration-300 text-light/90"
+              onClick={toggleVisibility}
+              className={`relative bg-dark/40 p-2.5 rounded-full hover:bg-primary/20 hover:text-primary transition-all duration-300 ${
+                state.currentTrack && state.isPlaying
+                  ? "text-primary"
+                  : "text-light/90"
+              }`}
               aria-label="Toggle Music Player"
             >
               <svg
@@ -107,6 +114,13 @@ export default function Navbar() {
                   d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"
                 />
               </svg>
+              {state.currentTrack && state.isPlaying && (
+                <motion.span
+                  className="absolute -top-1 -right-1 h-2 w-2 bg-primary rounded-full"
+                  animate={{ scale: [1, 1.2, 1] }}
+                  transition={{ repeat: Infinity, duration: 1.5 }}
+                />
+              )}
             </button>
 
             {/* Shopping Cart Button */}
@@ -143,6 +157,39 @@ export default function Navbar() {
 
           {/* Mobile Controls */}
           <div className="flex items-center space-x-4 md:hidden">
+            {/* Music Player Toggle Button - Mobile */}
+            <button
+              onClick={toggleVisibility}
+              className={`relative p-2 transition-all duration-300 ${
+                state.currentTrack && state.isPlaying
+                  ? "text-primary"
+                  : "text-light/90 hover:text-primary"
+              }`}
+              aria-label="Toggle Music Player"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                className="h-6 w-6"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={1.5}
+                  d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"
+                />
+              </svg>
+              {state.currentTrack && state.isPlaying && (
+                <motion.span
+                  className="absolute -top-1 -right-1 h-2 w-2 bg-primary rounded-full"
+                  animate={{ scale: [1, 1.2, 1] }}
+                  transition={{ repeat: Infinity, duration: 1.5 }}
+                />
+              )}
+            </button>
+
             {/* Shopping Cart Button - Mobile */}
             <button
               onClick={toggleCart}

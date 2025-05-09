@@ -61,7 +61,7 @@ const initialState: PlayerState = {
   currentTrack: null,
   currentAlbum: null,
   isPlaying: false,
-  volume: 0.7,
+  volume: typeof window !== "undefined" ? getVolumeSettings() : 0.7,
   progress: 0,
   duration: 0,
   isVisible: false,
@@ -236,6 +236,34 @@ function isMP4File(url: string): boolean {
   );
 }
 
+// Helper function to save volume settings
+const saveVolumeSettings = (volume: number) => {
+  if (typeof window !== "undefined") {
+    try {
+      localStorage.setItem("playerVolume", volume.toString());
+    } catch (error) {
+      console.error("Error saving volume settings:", error);
+    }
+  }
+};
+
+// Helper function to load volume settings
+function getVolumeSettings(): number {
+  if (typeof window === "undefined") return 0.7; // Default volume
+
+  try {
+    const savedVolume = localStorage.getItem("playerVolume");
+    if (savedVolume) {
+      const volume = parseFloat(savedVolume);
+      return volume >= 0 && volume <= 1 ? volume : 0.7;
+    }
+  } catch (error) {
+    console.error("Error loading volume settings:", error);
+  }
+
+  return 0.7; // Default volume if not saved or error
+}
+
 // Try to load player state from localStorage during initialization
 function getSavedState(): Partial<PlayerState> {
   if (typeof window === "undefined") return {};
@@ -372,6 +400,8 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   };
 
   const setVolume = (volume: number) => {
+    // Save volume setting immediately for persistence
+    saveVolumeSettings(volume);
     dispatch({ type: "SET_VOLUME", payload: { volume } });
   };
 
