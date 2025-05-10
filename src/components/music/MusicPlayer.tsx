@@ -304,9 +304,10 @@ export default function MusicPlayer() {
     currentIndex !== -1 ? `${currentIndex + 1} of ${state.queue.length}` : "";
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 bg-dark/90 backdrop-blur-md border-t border-light/10 transition-all duration-300 z-999">
-      <div className="container mx-auto px-2 sm:px-4 py-2 sm:py-3 flex justify-center">
-        <div className="flex flex-col sm:flex-row items-center gap-2 sm:gap-3 w-full max-w-5xl">
+    <div className="fixed bottom-0 left-0 right-0 bg-dark/95 backdrop-blur-lg border-t border-light/10 transition-all duration-300 z-[1000] shadow-lg">
+      {/* Main player container */}
+      <div className="container mx-auto px-2 sm:px-4 py-2 sm:py-3">
+        <div className="flex flex-col sm:flex-row items-center gap-2 sm:gap-4 w-full max-w-5xl mx-auto">
           {/* Hidden ReactHowler component for current track */}
           <ReactHowler
             key={`${state.currentTrack?.id || state.currentTrack?._key || ""}-${state.currentAlbum?.id || state.currentAlbum?._id || ""}`}
@@ -334,16 +335,16 @@ export default function MusicPlayer() {
             />
           )}
 
-          {/* Album artwork for desktop */}
-          <div className="hidden sm:flex items-center gap-2 sm:gap-3 sm:w-auto justify-between sm:justify-start">
-            <div className="flex items-center gap-2 sm:gap-3">
-              <div className="w-10 h-10 sm:w-12 sm:h-12 bg-mid/20 rounded-md overflow-hidden flex-shrink-0">
+          {/* Album artwork and track info - visible on all devices */}
+          <div className="flex items-center gap-3 sm:gap-4 w-full justify-between sm:justify-start sm:w-auto">
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 sm:w-14 sm:h-14 bg-mid/20 rounded-md overflow-hidden flex-shrink-0 shadow-md">
                 {state.currentAlbum?.artwork && (
                   <LazyImage
                     src={state.currentAlbum.artwork}
                     alt={state.currentAlbum.title}
-                    width={48}
-                    height={48}
+                    width={56}
+                    height={56}
                     className="w-full h-full object-cover"
                     lowQuality={true}
                   />
@@ -351,48 +352,40 @@ export default function MusicPlayer() {
               </div>
 
               <div className="truncate">
-                <h4 className="text-sm font-medium text-light truncate">
+                <h4 className="text-sm sm:text-base font-medium text-light truncate max-w-[150px] sm:max-w-[200px]">
                   {state.currentTrack.title}
                 </h4>
-                <p className="text-xs text-light/70 truncate">
+                <p className="text-xs text-light/70 truncate max-w-[150px] sm:max-w-[200px]">
                   {state.currentAlbum?.title || "Unknown Album"}
                 </p>
               </div>
             </div>
 
-            {/* Data saver toggle (desktop only) */}
-            <div className="ml-2 hidden md:flex items-center gap-1">
+            {/* Mobile-only controls */}
+            <div className="flex sm:hidden items-center gap-1">
               <button
-                onClick={() => setDataSaverMode(!dataSaverMode)}
-                className={`text-xs px-2 py-1 rounded ${
-                  dataSaverMode
-                    ? "bg-primary/20 text-primary"
-                    : "bg-light/5 text-light/60 hover:text-light/80"
-                } transition-colors`}
-                aria-label={dataSaverMode ? "Data saver on" : "Data saver off"}
-                disabled={state.isLoading}
+                onClick={() => handlePlayPause(!state.isPlaying)}
+                className="p-2 rounded-full bg-primary hover:bg-primary/90 text-light transition-colors"
+                aria-label={state.isPlaying ? "Pause" : "Play"}
               >
-                {dataSaverMode ? "Data Saver: ON" : "Data Saver: OFF"}
+                {state.isPlaying ? <Pause size={20} /> : <Play size={20} />}
               </button>
-            </div>
 
-            {/* Close button - Visible on desktop */}
-            <div className="ml-2">
               <button
                 onClick={handleClose}
-                className="text-light/70 hover:text-light transition-colors rounded-full p-1 hover:bg-light/10"
+                className="text-light/70 hover:text-light transition-colors p-2 hover:bg-light/10 rounded-full"
                 aria-label="Close player"
               >
-                <X size={20} />
+                <X size={18} />
               </button>
             </div>
           </div>
 
-          {/* Player controls */}
-          <div className="w-full max-w-2xl relative">
+          {/* Player controls - main section */}
+          <div className="w-full sm:flex-1 max-w-3xl">
             {/* Progress bar */}
             <div
-              className="w-full h-2 bg-light/20 rounded-full my-2 cursor-pointer relative"
+              className="w-full h-2 sm:h-3 bg-light/10 rounded-full my-2 cursor-pointer relative"
               onClick={(e) => {
                 const rect = e.currentTarget.getBoundingClientRect();
                 const pos = (e.clientX - rect.left) / rect.width;
@@ -406,22 +399,22 @@ export default function MusicPlayer() {
                 }}
               ></div>
               <div
-                className="absolute top-1/2 transform -translate-y-1/2 w-3 h-3 bg-primary rounded-full"
+                className="absolute top-1/2 transform -translate-y-1/2 w-3 h-3 sm:w-4 sm:h-4 bg-primary rounded-full shadow-sm"
                 style={{
                   left: `calc(${trackDuration > 0 ? (currentPosition / trackDuration) * 100 : 0}% - 6px)`,
                 }}
               ></div>
             </div>
 
-            {/* Controls */}
-            <div className="flex justify-between items-center">
+            {/* Time and controls on desktop */}
+            <div className="hidden sm:flex justify-between items-center mt-2">
               {/* Time display */}
-              <div className="text-xs text-light/70">
-                {formatTime(currentPosition)} / {formatTime(trackDuration)}
+              <div className="text-xs text-light/70 w-20">
+                {formatTime(currentPosition)}
               </div>
 
               {/* Main controls */}
-              <div className="flex items-center gap-4">
+              <div className="flex items-center gap-6">
                 {/* Previous button */}
                 {state.queue.length > 1 && (
                   <button
@@ -432,17 +425,17 @@ export default function MusicPlayer() {
                     }`}
                     aria-label="Previous track"
                   >
-                    <SkipBack size={22} />
+                    <SkipBack size={24} />
                   </button>
                 )}
 
                 {/* Play/Pause button */}
                 <button
                   onClick={() => handlePlayPause(!state.isPlaying)}
-                  className="p-2 rounded-full bg-primary hover:bg-primary/90 text-light transition-colors"
+                  className="p-3 rounded-full bg-primary hover:bg-primary/90 text-light transition-colors shadow-md"
                   aria-label={state.isPlaying ? "Pause" : "Play"}
                 >
-                  {state.isPlaying ? <Pause size={24} /> : <Play size={24} />}
+                  {state.isPlaying ? <Pause size={28} /> : <Play size={28} />}
                 </button>
 
                 {/* Next button */}
@@ -455,85 +448,115 @@ export default function MusicPlayer() {
                     }`}
                     aria-label="Next track"
                   >
-                    <SkipForward size={22} />
+                    <SkipForward size={24} />
                   </button>
                 )}
               </div>
 
-              {/* Volume control */}
-              <div className="hidden sm:flex items-center gap-2">
-                <button
-                  onClick={() => {
-                    const newVolume = state.volume > 0 ? 0 : 0.7;
-                    setVolume(newVolume);
-                  }}
-                  className="text-light/80 hover:text-primary transition-colors"
-                  aria-label={state.volume > 0 ? "Mute" : "Unmute"}
-                >
-                  {state.volume === 0 ? (
-                    <VolumeX size={18} />
-                  ) : state.volume > 0.5 ? (
-                    <Volume2 size={18} />
-                  ) : (
-                    <Volume1 size={18} />
-                  )}
-                </button>
+              {/* Duration display */}
+              <div className="text-xs text-light/70 w-20 text-right">
+                {formatTime(trackDuration)}
+              </div>
+            </div>
 
-                <input
-                  type="range"
-                  min="0"
-                  max="1"
-                  step="0.01"
-                  value={state.volume}
-                  onChange={(e) => setVolume(parseFloat(e.target.value))}
-                  className="w-20 slider-thumb accent-primary"
-                />
+            {/* Mobile time display and track controls */}
+            <div className="flex sm:hidden justify-between items-center mt-1">
+              <div className="text-[10px] text-light/60 w-16">
+                {formatTime(currentPosition)}
+              </div>
+
+              <div className="flex items-center gap-3">
+                {state.queue.length > 1 && (
+                  <button
+                    onClick={handlePrevTrack}
+                    disabled={!hasPrevTrack()}
+                    className={`p-1 ${!hasPrevTrack() ? "opacity-50" : "text-light/80"}`}
+                    aria-label="Previous track"
+                  >
+                    <SkipBack size={16} />
+                  </button>
+                )}
+
+                {state.queue.length > 1 && (
+                  <button
+                    onClick={handleNextTrack}
+                    disabled={!hasNextTrack()}
+                    className={`p-1 ${!hasNextTrack() ? "opacity-50" : "text-light/80"}`}
+                    aria-label="Next track"
+                  >
+                    <SkipForward size={16} />
+                  </button>
+                )}
+              </div>
+
+              <div className="text-[10px] text-light/60 w-16 text-right">
+                {formatTime(trackDuration)}
               </div>
             </div>
           </div>
 
-          {/* Queue indicator - Only visible on desktop */}
-          <div className="hidden md:flex items-center gap-4 text-light/70">
-            <span className="text-xs">{trackPosition}</span>
-          </div>
-        </div>
-      </div>
+          {/* Right side controls - only on desktop */}
+          <div className="hidden sm:flex items-center gap-4">
+            {/* Volume control */}
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => {
+                  const newVolume = state.volume > 0 ? 0 : 0.7;
+                  setVolume(newVolume);
+                }}
+                className="text-light/80 hover:text-primary transition-colors"
+                aria-label={state.volume > 0 ? "Mute" : "Unmute"}
+              >
+                {state.volume === 0 ? (
+                  <VolumeX size={18} />
+                ) : state.volume > 0.5 ? (
+                  <Volume2 size={18} />
+                ) : (
+                  <Volume1 size={18} />
+                )}
+              </button>
 
-      {/* Mobile player view */}
-      <div className="sm:hidden w-full flex items-center justify-between px-2 pb-1">
-        <div className="flex items-center gap-2">
-          <div className="w-8 h-8 bg-mid/20 rounded overflow-hidden flex-shrink-0">
-            {state.currentAlbum?.artwork && (
-              <Image
-                src={
-                  typeof state.currentAlbum.artwork === "string"
-                    ? state.currentAlbum.artwork
-                    : urlFor(state.currentAlbum.artwork).url()
-                }
-                alt={state.currentAlbum.title || "Album art"}
-                width={32}
-                height={32}
-                className="w-full h-full object-cover"
+              <input
+                type="range"
+                min="0"
+                max="1"
+                step="0.01"
+                value={state.volume}
+                onChange={(e) => setVolume(parseFloat(e.target.value))}
+                className="w-24 slider-thumb accent-primary"
               />
-            )}
-          </div>
-          <div className="truncate">
-            <div className="text-xs font-medium text-light truncate">
-              {state.currentTrack?.title}
             </div>
-            <div className="text-[10px] text-light/70 truncate">
-              {state.currentAlbum?.title || "Unknown album"}
+
+            {/* Data saver toggle */}
+            <div className="flex items-center gap-1">
+              <button
+                onClick={() => setDataSaverMode(!dataSaverMode)}
+                className={`text-xs px-2 py-1 rounded-md ${
+                  dataSaverMode
+                    ? "bg-primary/20 text-primary"
+                    : "bg-light/5 text-light/60 hover:text-light/80"
+                } transition-colors`}
+                aria-label={dataSaverMode ? "Data saver on" : "Data saver off"}
+              >
+                {dataSaverMode ? "Data Saver: ON" : "Data Saver: OFF"}
+              </button>
             </div>
+
+            {/* Queue position */}
+            <span className="text-xs text-light/70 min-w-[60px] text-right">
+              {trackPosition}
+            </span>
+
+            {/* Close button */}
+            <button
+              onClick={handleClose}
+              className="text-light/70 hover:text-light transition-colors rounded-full p-1 hover:bg-light/10"
+              aria-label="Close player"
+            >
+              <X size={22} />
+            </button>
           </div>
         </div>
-
-        <button
-          onClick={handleClose}
-          className="text-light/70 hover:text-light transition-colors p-1"
-          aria-label="Close player"
-        >
-          <X size={16} />
-        </button>
       </div>
 
       {/* Custom styles for slider */}
@@ -541,27 +564,29 @@ export default function MusicPlayer() {
         .slider-thumb {
           appearance: none;
           height: 4px;
-          background: rgba(255, 255, 255, 0.2);
+          background: rgba(255, 255, 255, 0.1);
           border-radius: 4px;
           outline: none;
         }
 
         .slider-thumb::-webkit-slider-thumb {
           appearance: none;
-          width: 10px;
-          height: 10px;
+          width: 12px;
+          height: 12px;
           background: var(--primary, #e63946);
           border-radius: 50%;
           cursor: pointer;
+          box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
         }
 
         .slider-thumb::-moz-range-thumb {
-          width: 10px;
-          height: 10px;
+          width: 12px;
+          height: 12px;
           background: var(--primary, #e63946);
           border-radius: 50%;
           cursor: pointer;
           border: none;
+          box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
         }
       `}</style>
     </div>
