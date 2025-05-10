@@ -425,7 +425,24 @@ export const EmailTemplate: React.FC<Readonly<EmailTemplateProps>> = ({
         </div>
         <a
           href={`${process.env.NEXT_PUBLIC_SITE_URL}/track-order?orderId=${orderId}&checkoutId=${checkoutId}`}
-          className="text-blue-500 underline text-center block mb-4 p-2 rounded-md bg-gray-100"
+          style={{
+            display: "block",
+            margin: "30px auto",
+            padding: "15px 30px",
+            backgroundColor: colors.primary,
+            color: colors.light,
+            textDecoration: "none",
+            borderRadius: "8px",
+            textAlign: "center",
+            fontFamily: "'Montserrat', 'Arial', sans-serif",
+            fontWeight: 600,
+            fontSize: "16px",
+            letterSpacing: "0.5px",
+            boxShadow: "0 4px 6px rgba(230, 57, 70, 0.2)",
+            transition: "all 0.3s ease",
+            maxWidth: "250px",
+            border: `2px solid ${colors.primary}`,
+          }}
         >
           Track Your Order
         </a>
