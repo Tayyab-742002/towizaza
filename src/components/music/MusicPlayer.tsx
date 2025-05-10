@@ -19,6 +19,8 @@ import { Track } from "@/data/music";
 import Image from "next/image";
 import LazyImage from "@/components/common/LazyImage";
 import ReactHowler from "react-howler";
+
+// Create a second Howler instance for preloading the next track
 export default function MusicPlayer() {
   const {
     state,
@@ -40,11 +42,14 @@ export default function MusicPlayer() {
   const [seeking, setSeeking] = useState(false);
   const [currentPosition, setCurrentPosition] = useState(0);
   const [trackDuration, setTrackDuration] = useState(0);
+  const [nextTrackUrl, setNextTrackUrl] = useState<string>("");
 
   // Refs
   const playerRef = useRef<ReactHowler | null>(null);
+  const nextPlayerRef = useRef<ReactHowler | null>(null);
   const seekIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const currentTrackIdRef = useRef<string | null>(null);
+  const loadingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Check for data saver mode on initial load
   useEffect(() => {
@@ -125,42 +130,63 @@ export default function MusicPlayer() {
     };
   }, [state.isPlaying, seeking, audioRef]);
 
+  // Preload the next track when current track is playing
+  useEffect(() => {
+    if (!state.currentTrack || !state.isPlaying) return;
+
+    // Get the next track if available
+    const currentIndex = getCurrentTrackIndex();
+    if (currentIndex >= 0 && currentIndex < state.queue.length - 1) {
+      const nextTrack = state.queue[currentIndex + 1];
+      if (nextTrack) {
+        const url = getAudioUrl(nextTrack, {
+          quality: dataSaverMode ? "low" : "high",
+          dataSaver: dataSaverMode,
+        });
+        setNextTrackUrl(url);
+      }
+    }
+  }, [state.currentTrack, state.isPlaying, state.queue, dataSaverMode]);
+
   // Track changes
   useEffect(() => {
     if (!state.currentTrack) return;
 
-    // Generate a unique identifier for the track
+    // Generate a stable identifier for the track that includes album context
     const trackId =
-      state.currentTrack.id ||
-      state.currentTrack._key ||
-      `${state.currentTrack.title}-${Math.random().toString(36).substring(2, 9)}`;
+      (state.currentTrack.id ||
+        state.currentTrack._key ||
+        state.currentTrack.title) +
+      "-" +
+      (state.currentAlbum?.id ||
+        state.currentAlbum?._id ||
+        state.currentAlbum?.title ||
+        "no-album");
 
     if (currentTrackIdRef.current !== trackId) {
-      console.log("Track changed");
+      console.log("Track changed or album context changed");
       currentTrackIdRef.current = trackId;
 
       // Reset current position when track changes
       setCurrentPosition(0);
       setTrackDuration(0);
 
-      // If we have a last playback time and it's a valid number, use it
-      if (
-        state.lastPlaybackTime &&
-        !isNaN(state.lastPlaybackTime) &&
-        state.lastPlaybackTime > 0
-      ) {
-        console.log(`Restoring playback position: ${state.lastPlaybackTime}`);
-
-        // We'll set this after the howler instance loads
-        setTimeout(() => {
-          if (playerRef.current) {
-            playerRef.current.seek(state.lastPlaybackTime);
-            setCurrentPosition(state.lastPlaybackTime);
-          }
-        }, 100);
+      // Clear any existing loading timeout
+      if (loadingTimeoutRef.current) {
+        clearTimeout(loadingTimeoutRef.current);
       }
+
+      // Always reset to beginning when album context changes
+      setTimeout(() => {
+        if (playerRef.current) {
+          // Force seek to beginning
+          playerRef.current.seek(0);
+          setCurrentPosition(0);
+          seek(0);
+        }
+      }, 50);
     }
-  }, [state.currentTrack, state.lastPlaybackTime]);
+  }, [state.currentTrack, state.currentAlbum, state.lastPlaybackTime, seek]);
 
   // Get current track index
   const getCurrentTrackIndex = () => {
@@ -189,14 +215,14 @@ export default function MusicPlayer() {
 
   // Handle next track
   const handleNextTrack = () => {
-    if (hasNextTrack() && !state.isLoading) {
+    if (hasNextTrack()) {
       nextTrack();
     }
   };
 
   // Handle previous track
   const handlePrevTrack = () => {
-    if (hasPrevTrack() && !state.isLoading) {
+    if (hasPrevTrack()) {
       prevTrack();
     }
   };
@@ -209,8 +235,6 @@ export default function MusicPlayer() {
 
   // Handle play/pause actions
   const handlePlayPause = (shouldPlay: boolean) => {
-    if (state.isLoading) return;
-
     if (shouldPlay) {
       if (!state.isPlaying) {
         console.log("User requested play");
@@ -226,7 +250,7 @@ export default function MusicPlayer() {
 
   // Handle seeking
   const handleSeek = (seekPosition: number) => {
-    if (playerRef.current && !state.isLoading) {
+    if (playerRef.current) {
       setSeeking(true);
 
       playerRef.current.seek(seekPosition);
@@ -234,7 +258,7 @@ export default function MusicPlayer() {
       seek(seekPosition);
 
       // Short delay to prevent UI jumps
-      setTimeout(() => setSeeking(false), 100);
+      setTimeout(() => setSeeking(false), 50);
     }
   };
 
@@ -283,17 +307,32 @@ export default function MusicPlayer() {
     <div className="fixed bottom-0 left-0 right-0 bg-dark/90 backdrop-blur-md border-t border-light/10 transition-all duration-300 z-999">
       <div className="container mx-auto px-2 sm:px-4 py-2 sm:py-3 flex justify-center">
         <div className="flex flex-col sm:flex-row items-center gap-2 sm:gap-3 w-full max-w-5xl">
-          {/* Hidden ReactHowler component */}
+          {/* Hidden ReactHowler component for current track */}
           <ReactHowler
+            key={`${state.currentTrack?.id || state.currentTrack?._key || ""}-${state.currentAlbum?.id || state.currentAlbum?._id || ""}`}
             src={audioUrl}
-            playing={state.isPlaying && !state.isLoading}
+            playing={state.isPlaying}
             ref={playerRef}
             volume={state.volume}
             onEnd={handleOnEnd}
             onLoad={handleOnLoad}
             html5={true}
             preload={true}
+            format={["mp3", "wav"]}
           />
+
+          {/* Hidden ReactHowler component for preloading next track */}
+          {nextTrackUrl && (
+            <ReactHowler
+              src={nextTrackUrl}
+              playing={false}
+              ref={nextPlayerRef}
+              volume={0}
+              html5={true}
+              preload={true}
+              format={["mp3", "wav"]}
+            />
+          )}
 
           {/* Album artwork for desktop */}
           <div className="hidden sm:flex items-center gap-2 sm:gap-3 sm:w-auto justify-between sm:justify-start">
@@ -387,11 +426,9 @@ export default function MusicPlayer() {
                 {state.queue.length > 1 && (
                   <button
                     onClick={handlePrevTrack}
-                    disabled={!hasPrevTrack() || state.isLoading}
+                    disabled={!hasPrevTrack()}
                     className={`text-light/80 hover:text-primary transition-colors ${
-                      !hasPrevTrack() || state.isLoading
-                        ? "opacity-50 cursor-not-allowed"
-                        : ""
+                      !hasPrevTrack() ? "opacity-50 cursor-not-allowed" : ""
                     }`}
                     aria-label="Previous track"
                   >
@@ -402,51 +439,19 @@ export default function MusicPlayer() {
                 {/* Play/Pause button */}
                 <button
                   onClick={() => handlePlayPause(!state.isPlaying)}
-                  disabled={state.isLoading}
-                  className={`p-2 rounded-full ${
-                    state.isLoading
-                      ? "bg-primary/50 cursor-not-allowed"
-                      : "bg-primary hover:bg-primary/90"
-                  } text-light transition-colors`}
+                  className="p-2 rounded-full bg-primary hover:bg-primary/90 text-light transition-colors"
                   aria-label={state.isPlaying ? "Pause" : "Play"}
                 >
-                  {state.isLoading ? (
-                    <svg
-                      className="animate-spin h-6 w-6 text-white"
-                      xmlns="http://www.w3.org/2000/svg"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                    >
-                      <circle
-                        className="opacity-25"
-                        cx="12"
-                        cy="12"
-                        r="10"
-                        stroke="currentColor"
-                        strokeWidth="4"
-                      ></circle>
-                      <path
-                        className="opacity-75"
-                        fill="currentColor"
-                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                      ></path>
-                    </svg>
-                  ) : state.isPlaying ? (
-                    <Pause size={24} />
-                  ) : (
-                    <Play size={24} />
-                  )}
+                  {state.isPlaying ? <Pause size={24} /> : <Play size={24} />}
                 </button>
 
                 {/* Next button */}
                 {state.queue.length > 1 && (
                   <button
                     onClick={handleNextTrack}
-                    disabled={!hasNextTrack() || state.isLoading}
+                    disabled={!hasNextTrack()}
                     className={`text-light/80 hover:text-primary transition-colors ${
-                      !hasNextTrack() || state.isLoading
-                        ? "opacity-50 cursor-not-allowed"
-                        : ""
+                      !hasNextTrack() ? "opacity-50 cursor-not-allowed" : ""
                     }`}
                     aria-label="Next track"
                   >
@@ -489,33 +494,7 @@ export default function MusicPlayer() {
 
           {/* Queue indicator - Only visible on desktop */}
           <div className="hidden md:flex items-center gap-4 text-light/70">
-            {state.isLoading ? (
-              <span className="text-xs flex items-center">
-                <svg
-                  className="animate-spin h-3 w-3 mr-1 text-primary"
-                  xmlns="http://www.w3.org/2000/svg"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                >
-                  <circle
-                    className="opacity-25"
-                    cx="12"
-                    cy="12"
-                    r="10"
-                    stroke="currentColor"
-                    strokeWidth="4"
-                  ></circle>
-                  <path
-                    className="opacity-75"
-                    fill="currentColor"
-                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                  ></path>
-                </svg>
-                Loading...
-              </span>
-            ) : (
-              <span className="text-xs">{trackPosition}</span>
-            )}
+            <span className="text-xs">{trackPosition}</span>
           </div>
         </div>
       </div>

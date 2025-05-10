@@ -83,7 +83,7 @@ function playerReducer(state: PlayerState, action: PlayerAction): PlayerState {
         isPlaying: true,
         progress: 0,
         isVisible: true,
-        isLoading: true,
+        isLoading: false,
       };
 
     case "PAUSE":
@@ -454,21 +454,15 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       // Update the active audio reference
       activeAudioRef.current = audioRef.current;
 
-      // Log the track change (outside the render cycle)
-      setTimeout(() => {
-        console.log("Track changed:", state.currentTrack?.title);
-      }, 0);
-
       // Set a timeout to automatically clear loading state if it persists too long
       const timeoutId = setTimeout(() => {
         if (state.isLoading) {
           console.log(
             "Loading timeout reached, forcing loading state to false"
           );
-          dispatch({ type: "SET_LOADING", payload: { isLoading: false } });
         }
-      }, 8000); // 8 seconds timeout for loading
-
+      }, 3000);
+      dispatch({ type: "SET_LOADING", payload: { isLoading: false } });
       return () => {
         clearTimeout(timeoutId);
       };
@@ -495,24 +489,40 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     }
   }, [state.isPlaying, state.isLoading, audioRef.current?.paused]);
 
+  // Clear loading state immediately whenever track changes
+  useEffect(() => {
+    if (state.currentTrack && state.isLoading) {
+      // Force loading state to false immediately
+      dispatch({ type: "SET_LOADING", payload: { isLoading: false } });
+    }
+  }, [state.currentTrack]);
+
   // Player actions with debounce protection
   const play = (track: Track, album?: Album) => {
     const now = Date.now();
 
-    // Don't interrupt current playback if trying to play the same track
-    if (state.currentTrack && track) {
+    // Don't interrupt current playback if trying to play the same track in the same album
+    if (state.currentTrack && track && state.currentAlbum && album) {
       const isSameTrack =
-        (track.id &&
+        ((track.id &&
           state.currentTrack.id &&
           track.id === state.currentTrack.id) ||
-        (track._key &&
-          state.currentTrack._key &&
-          track._key === state.currentTrack._key) ||
-        (track.title === state.currentTrack.title &&
-          getAudioUrl(track) === getAudioUrl(state.currentTrack));
+          (track._key &&
+            state.currentTrack._key &&
+            track._key === state.currentTrack._key) ||
+          (track.title === state.currentTrack.title &&
+            getAudioUrl(track) === getAudioUrl(state.currentTrack))) &&
+        // Also check if it's the same album
+        ((album.id &&
+          state.currentAlbum.id &&
+          album.id === state.currentAlbum.id) ||
+          (album._id &&
+            state.currentAlbum._id &&
+            album._id === state.currentAlbum._id) ||
+          album.title === state.currentAlbum.title);
 
       if (isSameTrack) {
-        // If the same track is already playing, just resume it
+        // If the same track in the same album is already playing, just resume it
         if (!state.isPlaying) {
           console.log("Resuming same track:", track.title);
           dispatch({ type: "RESUME" });
@@ -522,7 +532,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     }
 
     // Prevent rapid track changes (debounce)
-    if (isChangingTrackRef.current || now - lastTrackChangeRef.current < 300) {
+    if (isChangingTrackRef.current || now - lastTrackChangeRef.current < 100) {
       console.log("Debouncing rapid track change");
       return;
     }
@@ -536,8 +546,16 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       cleanupAudio(activeAudioRef.current);
     }
 
-    console.log("Play track:", track.title);
+    console.log(
+      "Play track:",
+      track.title,
+      "from album:",
+      album?.title || "unknown"
+    );
     dispatch({ type: "PLAY", payload: { track, album } });
+
+    // Immediately clear loading state for responsive playback
+    dispatch({ type: "SET_LOADING", payload: { isLoading: false } });
 
     // If album is provided, set queue to album tracks
     if (album && album.tracks && album.tracks.length > 0) {
@@ -555,19 +573,14 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       dispatch({ type: "SET_QUEUE", payload: { tracks: [track] } });
     }
 
-    // Clear changing flag after a delay
+    // Clear changing flag after a shorter delay
     if (trackChangeTimeoutRef.current) {
       clearTimeout(trackChangeTimeoutRef.current);
     }
 
     trackChangeTimeoutRef.current = setTimeout(() => {
       isChangingTrackRef.current = false;
-
-      // If loading is still true after this delay, there's likely an issue - force clear it
-      if (state.isLoading) {
-        dispatch({ type: "SET_LOADING", payload: { isLoading: false } });
-      }
-    }, 3000); // 3 seconds timeout for track change
+    }, 500); // Reduced timeout for faster response
   };
 
   const pause = () => {
@@ -622,21 +635,25 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
 
   const nextTrack = () => {
     // Don't allow next track if we're still loading or changing tracks
-    if (isChangingTrackRef.current || state.isLoading) {
+    if (isChangingTrackRef.current) {
       console.log("Ignoring nextTrack while changing tracks");
       return;
     }
 
+    // Reset last playback time to ensure track starts from beginning
+    dispatch({ type: "SAVE_PLAYBACK_TIME", payload: { time: 0 } });
     dispatch({ type: "NEXT_TRACK" });
   };
 
   const prevTrack = () => {
     // Don't allow prev track if we're still loading or changing tracks
-    if (isChangingTrackRef.current || state.isLoading) {
+    if (isChangingTrackRef.current) {
       console.log("Ignoring prevTrack while changing tracks");
       return;
     }
 
+    // Reset last playback time to ensure track starts from beginning
+    dispatch({ type: "SAVE_PLAYBACK_TIME", payload: { time: 0 } });
     dispatch({ type: "PREV_TRACK" });
   };
 
