@@ -40,6 +40,7 @@ export async function POST(request: NextRequest) {
         customerName: customerInfo.name,
         customerEmail: customerInfo.email,
         items,
+        checkoutId: orderData?.checkoutId,
         subtotal,
         shippingCost,
         tax,

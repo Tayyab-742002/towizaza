@@ -1,20 +1,7 @@
-import "../globals.css";
+import { SanityLive } from "@/sanity/lib/live";
+import "./globals.css";
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
-import Navbar from "@/components/common/Navbar";
-import { PlayerProvider } from "@/context/PlayerContext";
-import { CartProvider } from "@/context/CartContext";
-import { SanityLive } from "@/sanity/lib/live";
-import dynamic from "next/dynamic";
-import { MusicPlayerWrapper } from "@/components/music/MusicPlayerWrapper";
-
-const ShoppingCart = dynamic(() => import("@/components/store/ShoppingCart"), {
-  ssr: true,
-});
-
-const Footer = dynamic(() => import("@/components/common/Footer"), {
-  ssr: true,
-});
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -49,18 +36,19 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div
-      className={`${inter.className} min-h-screen flex flex-col bg-dark text-light`}
-    >
-      <PlayerProvider>
-        <CartProvider>
-          <Navbar />
-          <main className="flex-grow pt-16 sm:pt-20">{children}</main>
-          <MusicPlayerWrapper />
-          <ShoppingCart />
-          <Footer />
-        </CartProvider>
-      </PlayerProvider>
-    </div>
+    <html lang="en" className="scroll-smooth">
+      <head>
+        <meta
+          name="viewport"
+          content="width=device-width, initial-scale=1, maximum-scale=1"
+        />
+      </head>
+      <body
+        className={`${inter.className} min-h-screen flex flex-col bg-dark text-light`}
+      >
+        {children}
+      </body>
+      <SanityLive />
+    </html>
   );
 }

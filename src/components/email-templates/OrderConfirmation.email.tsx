@@ -1,3 +1,4 @@
+import Link from "next/link";
 import * as React from "react";
 
 interface OrderItem {
@@ -14,6 +15,7 @@ interface EmailTemplateProps {
   customerName: string;
   customerEmail: string;
   items: OrderItem[];
+  checkoutId: string;
   subtotal: number;
   shippingCost: number;
   tax: number;
@@ -31,6 +33,7 @@ interface EmailTemplateProps {
 
 export const EmailTemplate: React.FC<Readonly<EmailTemplateProps>> = ({
   orderId,
+  checkoutId,
   customerName,
   customerEmail,
   items,
@@ -420,6 +423,12 @@ export const EmailTemplate: React.FC<Readonly<EmailTemplateProps>> = ({
             </p>
           </div>
         </div>
+        <a
+          href={`${process.env.NEXT_PUBLIC_SITE_URL}/track-order?orderId=${orderId}&checkoutId=${checkoutId}`}
+          className="text-blue-500 underline text-center block mb-4 p-2 rounded-md bg-gray-100"
+        >
+          Track Your Order
+        </a>
       </div>
 
       {/* Footer */}

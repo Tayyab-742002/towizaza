@@ -272,6 +272,7 @@ export async function POST(req: NextRequest) {
           : 0,
         total: session.amount_total ? session.amount_total / 100 : 0,
         currency: session.currency,
+        checkoutId: session.id,
         shippingAddress: {
           line1: customerInfo.address.line1,
           line2: customerInfo.address.line1,
