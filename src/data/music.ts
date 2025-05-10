@@ -5,6 +5,7 @@ export interface Track {
   previewUrl?: string | {
     asset?: {
       _ref: string;
+      
     };
   };
   externalUrl?: string; // Added for Cloudflare/external hosted audio files
@@ -43,21 +44,21 @@ export const musicCatalog: Album[] = [
     downloadUrl: 'https://towizaza.bandcamp.com/album/example',
     featured: true,
     tracks: [
-      { 
-        id: 'track-1-1', 
-        title: 'Digital Dawn', 
+      {
+        id: 'track-1-1',
+        title: 'Digital Dawn',
         duration: '3:45',
         externalUrl: 'https://example-media.cloudflare.com/music/track-1-1.mp3'
       },
-      { 
-        id: 'track-1-2', 
-        title: 'Neural Networks', 
+      {
+        id: 'track-1-2',
+        title: 'Neural Networks',
         duration: '4:12',
         externalUrl: 'https://example-media.cloudflare.com/music/track-1-2.mp3'
       },
-      { 
-        id: 'track-1-3', 
-        title: 'Social Media Safety', 
+      {
+        id: 'track-1-3',
+        title: 'Social Media Safety',
         duration: '5:30',
         externalUrl: 'https://pub-20f982007aa54df4849bcd969b89a1bf.r2.dev/social-media-safety.mp4'
       },
@@ -207,4 +208,4 @@ export const musicCatalog: Album[] = [
       { id: 'track-9-5', title: 'Cybernetic Evolution', duration: '6:15' }
     ]
   }
-]; 
+];

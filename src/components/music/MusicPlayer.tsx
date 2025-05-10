@@ -1,15 +1,9 @@
 "use client";
 
-import { useState, useEffect, useRef, lazy, Suspense } from "react";
+import { useState, useEffect, useRef } from "react";
 import { usePlayer } from "@/context/PlayerContext";
 import { urlFor } from "@/lib/sanity";
-import AudioPlayer, { RHAP_UI } from "react-h5-audio-player";
-import "react-h5-audio-player/lib/styles.css";
-import {
-  getAudioUrl,
-  isMobileDataConnection,
-  preloadNextTrack,
-} from "@/lib/sanity";
+import { getAudioUrl, isMobileDataConnection } from "@/lib/sanity";
 import {
   X,
   SkipBack,
@@ -24,279 +18,9 @@ import { usePathname } from "next/navigation";
 import { Track } from "@/data/music";
 import Image from "next/image";
 import LazyImage from "@/components/common/LazyImage";
-import dynamic from "next/dynamic";
+import ReactHowler from "react-howler";
 
-// Define proper types for the audio player events
-interface AudioPlayerElement extends HTMLAudioElement {
-  currentTime: number;
-  duration: number;
-  volume: number;
-}
-
-// Define player control component props
-interface PlayerControlsProps {
-  audioUrl: string;
-  handlePrevTrack: () => void;
-  handleNextTrack: () => void;
-  showSkipControls: boolean;
-  playerRef: React.RefObject<any>;
-  resumeCallback: () => void;
-  pauseCallback: () => void;
-  onListen: (e: any) => void;
-  onLoadedMetaData: (e: any) => void;
-  onVolumeChange: (e: any) => void;
-  isPlaying: boolean;
-}
-
-// Additional props for mobile player
-interface MobilePlayerProps extends PlayerControlsProps {
-  currentTrack: Track;
-  currentAlbum: any;
-  handleClose: () => void;
-}
-
-// Custom mobile player with improved controls
-const MobilePlayerControls = ({
-  audioUrl,
-  handlePrevTrack,
-  handleNextTrack,
-  showSkipControls,
-  playerRef,
-  resumeCallback,
-  pauseCallback,
-  onListen,
-  onLoadedMetaData,
-  onVolumeChange,
-  isPlaying,
-  currentTrack,
-  currentAlbum,
-  handleClose,
-}: MobilePlayerProps) => {
-  const [progress, setProgress] = useState(0);
-  const [duration, setDuration] = useState(0);
-  const [isMuted, setIsMuted] = useState(false);
-  const [volumeLevel, setVolumeLevel] = useState(0.7);
-
-  // Update progress when player is active
-  useEffect(() => {
-    const updateProgress = () => {
-      if (playerRef.current?.audio?.current) {
-        const audio = playerRef.current.audio.current;
-        setProgress(audio.currentTime);
-        setDuration(audio.duration || 0);
-      }
-    };
-
-    const interval = setInterval(updateProgress, 250);
-    return () => clearInterval(interval);
-  }, [playerRef]);
-
-  // Format time in mm:ss
-  const formatTime = (seconds: number) => {
-    if (isNaN(seconds)) return "0:00";
-    const mins = Math.floor(seconds / 60);
-    const secs = Math.floor(seconds % 60);
-    return `${mins}:${secs < 10 ? "0" + secs : secs}`;
-  };
-
-  // Calculate progress percentage
-  const progressPercentage = duration > 0 ? (progress / duration) * 100 : 0;
-
-  // Handle progress bar click
-  const handleProgressClick = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (!playerRef.current?.audio?.current) return;
-
-    const progressBar = e.currentTarget;
-    const rect = progressBar.getBoundingClientRect();
-    const pos = (e.clientX - rect.left) / rect.width;
-    const newTime = pos * duration;
-
-    if (playerRef.current?.audio?.current) {
-      playerRef.current.audio.current.currentTime = newTime;
-      setProgress(newTime);
-    }
-  };
-
-  // Toggle mute state
-  const toggleMute = () => {
-    if (playerRef.current?.audio?.current) {
-      const audio = playerRef.current.audio.current;
-      if (!isMuted) {
-        setVolumeLevel(audio.volume);
-        audio.volume = 0;
-      } else {
-        audio.volume = volumeLevel;
-      }
-      setIsMuted(!isMuted);
-    }
-  };
-
-  return (
-    <div className="w-full flex flex-col sm:hidden">
-      {/* Track info and close button */}
-      <div className="w-full flex justify-between items-center mb-2 px-2">
-        <div className="flex items-center gap-2 overflow-hidden">
-          <div className="w-8 h-8 rounded overflow-hidden flex-shrink-0 bg-dark/50">
-            {currentAlbum?.artwork && (
-              <Image
-                src={
-                  typeof currentAlbum.artwork === "string"
-                    ? currentAlbum.artwork
-                    : urlFor(currentAlbum.artwork).url()
-                }
-                alt={currentAlbum.title || "Album art"}
-                width={32}
-                height={32}
-                className="w-full h-full object-cover"
-              />
-            )}
-          </div>
-          <div className="flex-1 min-w-0">
-            <div className="text-xs font-medium text-light truncate">
-              {currentTrack?.title}
-            </div>
-            <div className="text-[10px] text-light/70 truncate">
-              {currentAlbum?.title || "Unknown album"}
-            </div>
-          </div>
-        </div>
-        <button
-          onClick={handleClose}
-          className="text-light/70 hover:text-light transition-colors rounded-full p-1 ml-2"
-          aria-label="Close player"
-        >
-          <X size={16} />
-        </button>
-      </div>
-
-      {/* Custom progress bar */}
-      <div
-        className="w-full h-1 bg-light/20 relative cursor-pointer mx-auto mb-1.5 px-2"
-        onClick={handleProgressClick}
-      >
-        <div
-          className="absolute top-0 left-0 h-full bg-primary"
-          style={{ width: `${progressPercentage}%` }}
-        />
-        <div
-          className="absolute top-1/2 -translate-y-1/2 w-2.5 h-2.5 rounded-full bg-primary"
-          style={{ left: `calc(${progressPercentage}% - 5px)` }}
-        />
-      </div>
-
-      {/* Time indicators */}
-      <div className="flex justify-between px-2 mb-1">
-        <div className="text-[10px] text-light/70">{formatTime(progress)}</div>
-        <div className="text-[10px] text-light/70">{formatTime(duration)}</div>
-      </div>
-
-      {/* Custom controls */}
-      <div className="flex items-center justify-center gap-2 py-1">
-        {/* Previous button */}
-        {showSkipControls && (
-          <button
-            onClick={handlePrevTrack}
-            className="p-2 text-light/80 hover:text-primary transition-colors"
-            aria-label="Previous track"
-            disabled={!showSkipControls}
-          >
-            <SkipBack size={20} />
-          </button>
-        )}
-
-        {/* Play/Pause button */}
-        <button
-          onClick={isPlaying ? pauseCallback : resumeCallback}
-          className="p-2 rounded-full bg-primary/90 hover:bg-primary text-light transition-colors flex items-center justify-center"
-          aria-label={isPlaying ? "Pause" : "Play"}
-        >
-          {isPlaying ? <Pause size={22} /> : <Play size={22} />}
-        </button>
-
-        {/* Next button */}
-        {showSkipControls && (
-          <button
-            onClick={handleNextTrack}
-            className="p-2 text-light/80 hover:text-primary transition-colors"
-            aria-label="Next track"
-            disabled={!showSkipControls}
-          >
-            <SkipForward size={20} />
-          </button>
-        )}
-
-        {/* Volume button */}
-        <button
-          onClick={toggleMute}
-          className="p-2 text-light/80 hover:text-primary transition-colors ml-3"
-          aria-label={isMuted ? "Unmute" : "Mute"}
-        >
-          {isMuted ? (
-            <VolumeX size={18} />
-          ) : playerRef.current?.audio?.current?.volume > 0.5 ? (
-            <Volume2 size={18} />
-          ) : (
-            <Volume1 size={18} />
-          )}
-        </button>
-      </div>
-
-      {/* Hidden audio player for mobile */}
-      <div className="hidden">
-        <AudioPlayer
-          ref={playerRef}
-          src={audioUrl}
-          onPlay={resumeCallback}
-          onPause={pauseCallback}
-          onListen={onListen}
-          onLoadedMetaData={onLoadedMetaData}
-          onVolumeChange={onVolumeChange}
-          autoPlayAfterSrcChange={isPlaying}
-        />
-      </div>
-    </div>
-  );
-};
-
-// Desktop player
-const DesktopPlayerControls = ({
-  audioUrl,
-  handlePrevTrack,
-  handleNextTrack,
-  showSkipControls,
-  playerRef,
-  resumeCallback,
-  pauseCallback,
-  onListen,
-  onLoadedMetaData,
-  onVolumeChange,
-  isPlaying,
-}: PlayerControlsProps) => {
-  return (
-    <div className="hidden sm:block w-full sm:flex-1 sm:max-w-2xl z-999">
-      <AudioPlayer
-        ref={playerRef}
-        src={audioUrl}
-        showSkipControls={showSkipControls}
-        showJumpControls={false}
-        onClickPrevious={handlePrevTrack}
-        onClickNext={handleNextTrack}
-        onPlay={resumeCallback}
-        onPause={pauseCallback}
-        onListen={onListen}
-        onLoadedMetaData={onLoadedMetaData}
-        onVolumeChange={onVolumeChange}
-        autoPlayAfterSrcChange={isPlaying}
-        className="compact-player"
-        style={{
-          backgroundColor: "transparent",
-          boxShadow: "none",
-        }}
-      />
-    </div>
-  );
-};
-
+// Create a second Howler instance for preloading the next track
 export default function MusicPlayer() {
   const {
     state,
@@ -309,32 +33,41 @@ export default function MusicPlayer() {
     audioRef,
     toggleVisibility,
   } = usePlayer();
-  const playerRef = useRef<any>(null);
+
   const pathname = usePathname();
   const previousPath = useRef<string>(pathname);
+
+  // State for the player
   const [dataSaverMode, setDataSaverMode] = useState(false);
+  const [seeking, setSeeking] = useState(false);
+  const [currentPosition, setCurrentPosition] = useState(0);
+  const [trackDuration, setTrackDuration] = useState(0);
+  const [nextTrackUrl, setNextTrackUrl] = useState<string>("");
+
+  // Refs
+  const playerRef = useRef<ReactHowler | null>(null);
+  const nextPlayerRef = useRef<ReactHowler | null>(null);
+  const seekIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const currentTrackIdRef = useRef<string | null>(null);
+  const loadingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Check for data saver mode on initial load
   useEffect(() => {
-    // Safe check for browser environment
     if (typeof window === "undefined") return;
 
     const checkDataSaverMode = () => {
       const onMobileData = isMobileDataConnection();
       const userPreference = localStorage.getItem("audioDataSaver");
 
-      // If there's a saved preference, use that
       if (userPreference !== null) {
         setDataSaverMode(userPreference === "true");
       } else {
-        // Otherwise use the detected connection type
         setDataSaverMode(onMobileData);
       }
     };
 
     checkDataSaverMode();
 
-    // Listen for online events to adjust quality when connection changes
     window.addEventListener("online", checkDataSaverMode);
     return () => window.removeEventListener("online", checkDataSaverMode);
   }, []);
@@ -352,90 +85,108 @@ export default function MusicPlayer() {
       console.log(
         `Navigation detected: ${previousPath.current} -> ${pathname}`
       );
-
-      // When navigation happens and the player was playing, ensure it continues
-      if (state.isPlaying && playerRef.current?.audio?.current) {
-        // We need to ensure the audio element keeps playing during navigation
-        const currentAudio = playerRef.current.audio.current;
-
-        // Small delay to ensure the audio keeps playing after route change
-        setTimeout(() => {
-          if (state.isPlaying && !currentAudio.paused) {
-            console.log("Ensuring playback continues after navigation");
-          } else if (state.isPlaying && currentAudio.paused) {
-            console.log("Playback was interrupted, resuming...");
-            currentAudio
-              .play()
-              .catch((err: Error) =>
-                console.error("Failed to resume after navigation:", err)
-              );
-          }
-        }, 100);
-      }
-
       previousPath.current = pathname;
     }
-  }, [pathname, state.isPlaying]);
+  }, [pathname]);
 
-  // Preload next track when current track changes
+  // Set up seek interval when playing
   useEffect(() => {
-    if (state.currentTrack && state.queue.length > 0 && !dataSaverMode) {
-      preloadNextTrack(state.currentTrack, state.queue);
-    }
-  }, [state.currentTrack, state.queue, dataSaverMode]);
+    if (state.isPlaying && !seeking && playerRef.current) {
+      // Clear any existing interval
+      if (seekIntervalRef.current) {
+        clearInterval(seekIntervalRef.current);
+      }
 
-  // Force play when a track is loaded initially
-  useEffect(() => {
-    if (playerRef.current && playerRef.current.audio.current) {
-      if (state.isPlaying) {
-        // Small timeout to ensure the audio element is fully initialized
-        const playPromise = setTimeout(() => {
-          if (playerRef.current && playerRef.current.audio.current) {
-            const playPromise = playerRef.current.audio.current.play();
+      // Create new interval to update the time display
+      seekIntervalRef.current = setInterval(() => {
+        try {
+          if (playerRef.current) {
+            const position = playerRef.current.seek();
+            if (typeof position === "number") {
+              setCurrentPosition(position);
 
-            if (playPromise !== undefined) {
-              playPromise.catch((error: any) => {
-                console.error("Playback failed:", error);
-                // If autoplay is prevented, we need to update our state
-                if (error.name === "NotAllowedError") {
-                  pause();
-                }
-              });
+              // Update the audio ref for any external components that need this info
+              if (audioRef.current) {
+                audioRef.current.currentTime = position;
+              }
             }
           }
-        }, 100);
-
-        return () => clearTimeout(playPromise);
-      } else {
-        // Handle pause state
-        playerRef.current.audio.current.pause();
-      }
+        } catch (error) {
+          console.error("Error in seek interval:", error);
+        }
+      }, 250);
+    } else if (!state.isPlaying && seekIntervalRef.current) {
+      // Clear interval when paused
+      clearInterval(seekIntervalRef.current);
+      seekIntervalRef.current = null;
     }
-  }, [state.currentTrack, state.isPlaying, pause]);
 
-  // If the audio player element changes (e.g., after navigation), restore state
+    // Cleanup on unmount
+    return () => {
+      if (seekIntervalRef.current) {
+        clearInterval(seekIntervalRef.current);
+        seekIntervalRef.current = null;
+      }
+    };
+  }, [state.isPlaying, seeking, audioRef]);
+
+  // Preload the next track when current track is playing
   useEffect(() => {
-    if (playerRef.current?.audio?.current && audioRef.current) {
-      audioRef.current = playerRef.current.audio.current;
+    if (!state.currentTrack || !state.isPlaying) return;
 
-      // If we have a saved playback time, restore it
-      if (state.lastPlaybackTime > 0) {
-        playerRef.current.audio.current.currentTime = state.lastPlaybackTime;
+    // Get the next track if available
+    const currentIndex = getCurrentTrackIndex();
+    if (currentIndex >= 0 && currentIndex < state.queue.length - 1) {
+      const nextTrack = state.queue[currentIndex + 1];
+      if (nextTrack) {
+        const url = getAudioUrl(nextTrack, {
+          quality: dataSaverMode ? "low" : "high",
+          dataSaver: dataSaverMode,
+        });
+        setNextTrackUrl(url);
       }
     }
-  }, [playerRef.current, audioRef, state.lastPlaybackTime]);
+  }, [state.currentTrack, state.isPlaying, state.queue, dataSaverMode]);
 
-  // Helper function to get album artwork URL
-  const getArtworkUrl = () => {
-    if (!state.currentAlbum?.artwork) return "/images/placeholder-album.jpg";
+  // Track changes
+  useEffect(() => {
+    if (!state.currentTrack) return;
 
-    if (typeof state.currentAlbum.artwork === "string") {
-      return state.currentAlbum.artwork;
+    // Generate a stable identifier for the track that includes album context
+    const trackId =
+      (state.currentTrack.id ||
+        state.currentTrack._key ||
+        state.currentTrack.title) +
+      "-" +
+      (state.currentAlbum?.id ||
+        state.currentAlbum?._id ||
+        state.currentAlbum?.title ||
+        "no-album");
+
+    if (currentTrackIdRef.current !== trackId) {
+      console.log("Track changed or album context changed");
+      currentTrackIdRef.current = trackId;
+
+      // Reset current position when track changes
+      setCurrentPosition(0);
+      setTrackDuration(0);
+
+      // Clear any existing loading timeout
+      if (loadingTimeoutRef.current) {
+        clearTimeout(loadingTimeoutRef.current);
+      }
+
+      // Always reset to beginning when album context changes
+      setTimeout(() => {
+        if (playerRef.current) {
+          // Force seek to beginning
+          playerRef.current.seek(0);
+          setCurrentPosition(0);
+          seek(0);
+        }
+      }, 50);
     }
-
-    // If it's a Sanity image
-    return urlFor(state.currentAlbum.artwork).url();
-  };
+  }, [state.currentTrack, state.currentAlbum, state.lastPlaybackTime, seek]);
 
   // Get current track index
   const getCurrentTrackIndex = () => {
@@ -478,32 +229,61 @@ export default function MusicPlayer() {
 
   // Handle closing the player
   const handleClose = () => {
-    pause(); // Pause the playback
+    pause(); // Update state
     toggleVisibility(); // Hide the player
   };
 
-  // Functions for audio player callbacks
-  const handleListen = (e: any) => {
-    if (audioRef.current && e.target) {
-      const target = e.target as AudioPlayerElement;
-      audioRef.current.currentTime = target.currentTime;
-    }
-  };
-
-  const handleLoadedMetaData = (e: any) => {
-    if (audioRef.current && e.target) {
-      const target = e.target as AudioPlayerElement;
-      // Update our context with the duration
-      if (target.duration && !isNaN(target.duration)) {
-        seek(audioRef.current.currentTime);
+  // Handle play/pause actions
+  const handlePlayPause = (shouldPlay: boolean) => {
+    if (shouldPlay) {
+      if (!state.isPlaying) {
+        console.log("User requested play");
+        resume();
+      }
+    } else {
+      if (state.isPlaying) {
+        console.log("User requested pause");
+        pause();
       }
     }
   };
 
-  const handleVolumeChange = (e: any) => {
-    if (e.target) {
-      const target = e.target as AudioPlayerElement;
-      setVolume(target.volume);
+  // Handle seeking
+  const handleSeek = (seekPosition: number) => {
+    if (playerRef.current) {
+      setSeeking(true);
+
+      playerRef.current.seek(seekPosition);
+      setCurrentPosition(seekPosition);
+      seek(seekPosition);
+
+      // Short delay to prevent UI jumps
+      setTimeout(() => setSeeking(false), 50);
+    }
+  };
+
+  // Handle when a track ends
+  const handleOnEnd = () => {
+    console.log("Track ended");
+    if (hasNextTrack()) {
+      handleNextTrack();
+    } else {
+      pause();
+    }
+  };
+
+  // Handle when track loads
+  const handleOnLoad = () => {
+    console.log("Track loaded");
+    if (playerRef.current) {
+      const duration = playerRef.current.duration();
+      setTrackDuration(duration);
+
+      // If we had a previous playback position, seek to it
+      if (state.lastPlaybackTime > 0 && state.lastPlaybackTime < duration) {
+        playerRef.current.seek(state.lastPlaybackTime);
+        setCurrentPosition(state.lastPlaybackTime);
+      }
     }
   };
 
@@ -524,19 +304,47 @@ export default function MusicPlayer() {
     currentIndex !== -1 ? `${currentIndex + 1} of ${state.queue.length}` : "";
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 bg-dark/90 backdrop-blur-md border-t border-light/10 transition-all duration-300 z-999">
-      <div className="container mx-auto px-2 sm:px-4 py-2 sm:py-3 flex justify-center">
-        <div className="flex flex-col sm:flex-row items-center gap-2 sm:gap-3 w-full max-w-5xl">
-          {/* Album artwork for desktop */}
-          <div className="hidden sm:flex items-center gap-2 sm:gap-3 sm:w-auto justify-between sm:justify-start">
-            <div className="flex items-center gap-2 sm:gap-3">
-              <div className="w-10 h-10 sm:w-12 sm:h-12 bg-mid/20 rounded-md overflow-hidden flex-shrink-0">
+    <div className="fixed bottom-0 left-0 right-0 bg-dark/95 backdrop-blur-lg border-t border-light/10 transition-all duration-300 z-[1000] shadow-lg">
+      {/* Main player container */}
+      <div className="container mx-auto px-2 sm:px-4 py-2 sm:py-3">
+        <div className="flex flex-col sm:flex-row items-center gap-2 sm:gap-4 w-full max-w-5xl mx-auto">
+          {/* Hidden ReactHowler component for current track */}
+          <ReactHowler
+            key={`${state.currentTrack?.id || state.currentTrack?._key || ""}-${state.currentAlbum?.id || state.currentAlbum?._id || ""}`}
+            src={audioUrl}
+            playing={state.isPlaying}
+            ref={playerRef}
+            volume={state.volume}
+            onEnd={handleOnEnd}
+            onLoad={handleOnLoad}
+            html5={true}
+            preload={true}
+            format={["mp3", "wav"]}
+          />
+
+          {/* Hidden ReactHowler component for preloading next track */}
+          {nextTrackUrl && (
+            <ReactHowler
+              src={nextTrackUrl}
+              playing={false}
+              ref={nextPlayerRef}
+              volume={0}
+              html5={true}
+              preload={true}
+              format={["mp3", "wav"]}
+            />
+          )}
+
+          {/* Album artwork and track info - visible on all devices */}
+          <div className="flex items-center gap-3 sm:gap-4 w-full justify-between sm:justify-start sm:w-auto">
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 sm:w-14 sm:h-14 bg-mid/20 rounded-md overflow-hidden flex-shrink-0 shadow-md">
                 {state.currentAlbum?.artwork && (
                   <LazyImage
                     src={state.currentAlbum.artwork}
                     alt={state.currentAlbum.title}
-                    width={48}
-                    height={48}
+                    width={56}
+                    height={56}
                     className="w-full h-full object-cover"
                     lowQuality={true}
                   />
@@ -544,20 +352,186 @@ export default function MusicPlayer() {
               </div>
 
               <div className="truncate">
-                <h4 className="text-sm font-medium text-light truncate">
+                <h4 className="text-sm sm:text-base font-medium text-light truncate max-w-[150px] sm:max-w-[200px]">
                   {state.currentTrack.title}
                 </h4>
-                <p className="text-xs text-light/70 truncate">
+                <p className="text-xs text-light/70 truncate max-w-[150px] sm:max-w-[200px]">
                   {state.currentAlbum?.title || "Unknown Album"}
                 </p>
               </div>
             </div>
 
-            {/* Data saver toggle (desktop only) */}
-            <div className="ml-2 hidden md:flex items-center gap-1">
+            {/* Mobile-only controls */}
+            <div className="flex sm:hidden items-center gap-1">
+              <button
+                onClick={() => handlePlayPause(!state.isPlaying)}
+                className="p-2 rounded-full bg-primary hover:bg-primary/90 text-light transition-colors"
+                aria-label={state.isPlaying ? "Pause" : "Play"}
+              >
+                {state.isPlaying ? <Pause size={20} /> : <Play size={20} />}
+              </button>
+
+              <button
+                onClick={handleClose}
+                className="text-light/70 hover:text-light transition-colors p-2 hover:bg-light/10 rounded-full"
+                aria-label="Close player"
+              >
+                <X size={18} />
+              </button>
+            </div>
+          </div>
+
+          {/* Player controls - main section */}
+          <div className="w-full sm:flex-1 max-w-3xl">
+            {/* Progress bar */}
+            <div
+              className="w-full h-2 sm:h-3 bg-light/10 rounded-full my-2 cursor-pointer relative"
+              onClick={(e) => {
+                const rect = e.currentTarget.getBoundingClientRect();
+                const pos = (e.clientX - rect.left) / rect.width;
+                handleSeek(pos * trackDuration);
+              }}
+            >
+              <div
+                className="absolute top-0 left-0 h-full bg-primary rounded-full"
+                style={{
+                  width: `${trackDuration > 0 ? (currentPosition / trackDuration) * 100 : 0}%`,
+                }}
+              ></div>
+              <div
+                className="absolute top-1/2 transform -translate-y-1/2 w-3 h-3 sm:w-4 sm:h-4 bg-primary rounded-full shadow-sm"
+                style={{
+                  left: `calc(${trackDuration > 0 ? (currentPosition / trackDuration) * 100 : 0}% - 6px)`,
+                }}
+              ></div>
+            </div>
+
+            {/* Time and controls on desktop */}
+            <div className="hidden sm:flex justify-between items-center mt-2">
+              {/* Time display */}
+              <div className="text-xs text-light/70 w-20">
+                {formatTime(currentPosition)}
+              </div>
+
+              {/* Main controls */}
+              <div className="flex items-center gap-6">
+                {/* Previous button */}
+                {state.queue.length > 1 && (
+                  <button
+                    onClick={handlePrevTrack}
+                    disabled={!hasPrevTrack()}
+                    className={`text-light/80 hover:text-primary transition-colors ${
+                      !hasPrevTrack() ? "opacity-50 cursor-not-allowed" : ""
+                    }`}
+                    aria-label="Previous track"
+                  >
+                    <SkipBack size={24} />
+                  </button>
+                )}
+
+                {/* Play/Pause button */}
+                <button
+                  onClick={() => handlePlayPause(!state.isPlaying)}
+                  className="p-3 rounded-full bg-primary hover:bg-primary/90 text-light transition-colors shadow-md"
+                  aria-label={state.isPlaying ? "Pause" : "Play"}
+                >
+                  {state.isPlaying ? <Pause size={28} /> : <Play size={28} />}
+                </button>
+
+                {/* Next button */}
+                {state.queue.length > 1 && (
+                  <button
+                    onClick={handleNextTrack}
+                    disabled={!hasNextTrack()}
+                    className={`text-light/80 hover:text-primary transition-colors ${
+                      !hasNextTrack() ? "opacity-50 cursor-not-allowed" : ""
+                    }`}
+                    aria-label="Next track"
+                  >
+                    <SkipForward size={24} />
+                  </button>
+                )}
+              </div>
+
+              {/* Duration display */}
+              <div className="text-xs text-light/70 w-20 text-right">
+                {formatTime(trackDuration)}
+              </div>
+            </div>
+
+            {/* Mobile time display and track controls */}
+            <div className="flex sm:hidden justify-between items-center mt-1">
+              <div className="text-[10px] text-light/60 w-16">
+                {formatTime(currentPosition)}
+              </div>
+
+              <div className="flex items-center gap-3">
+                {state.queue.length > 1 && (
+                  <button
+                    onClick={handlePrevTrack}
+                    disabled={!hasPrevTrack()}
+                    className={`p-1 ${!hasPrevTrack() ? "opacity-50" : "text-light/80"}`}
+                    aria-label="Previous track"
+                  >
+                    <SkipBack size={16} />
+                  </button>
+                )}
+
+                {state.queue.length > 1 && (
+                  <button
+                    onClick={handleNextTrack}
+                    disabled={!hasNextTrack()}
+                    className={`p-1 ${!hasNextTrack() ? "opacity-50" : "text-light/80"}`}
+                    aria-label="Next track"
+                  >
+                    <SkipForward size={16} />
+                  </button>
+                )}
+              </div>
+
+              <div className="text-[10px] text-light/60 w-16 text-right">
+                {formatTime(trackDuration)}
+              </div>
+            </div>
+          </div>
+
+          {/* Right side controls - only on desktop */}
+          <div className="hidden sm:flex items-center gap-4">
+            {/* Volume control */}
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => {
+                  const newVolume = state.volume > 0 ? 0 : 0.7;
+                  setVolume(newVolume);
+                }}
+                className="text-light/80 hover:text-primary transition-colors"
+                aria-label={state.volume > 0 ? "Mute" : "Unmute"}
+              >
+                {state.volume === 0 ? (
+                  <VolumeX size={18} />
+                ) : state.volume > 0.5 ? (
+                  <Volume2 size={18} />
+                ) : (
+                  <Volume1 size={18} />
+                )}
+              </button>
+
+              <input
+                type="range"
+                min="0"
+                max="1"
+                step="0.01"
+                value={state.volume}
+                onChange={(e) => setVolume(parseFloat(e.target.value))}
+                className="w-24 slider-thumb accent-primary"
+              />
+            </div>
+
+            {/* Data saver toggle */}
+            <div className="flex items-center gap-1">
               <button
                 onClick={() => setDataSaverMode(!dataSaverMode)}
-                className={`text-xs px-2 py-1 rounded ${
+                className={`text-xs px-2 py-1 rounded-md ${
                   dataSaverMode
                     ? "bg-primary/20 text-primary"
                     : "bg-light/5 text-light/60 hover:text-light/80"
@@ -568,148 +542,61 @@ export default function MusicPlayer() {
               </button>
             </div>
 
-            {/* Close button - Visible on desktop */}
-            <div className="ml-2">
-              <button
-                onClick={handleClose}
-                className="text-light/70 hover:text-light transition-colors rounded-full p-1 hover:bg-light/10"
-                aria-label="Close player"
-              >
-                <X size={20} />
-              </button>
-            </div>
-          </div>
+            {/* Queue position */}
+            <span className="text-xs text-light/70 min-w-[60px] text-right">
+              {trackPosition}
+            </span>
 
-          {/* Mobile-optimized player */}
-          <MobilePlayerControls
-            audioUrl={audioUrl}
-            handlePrevTrack={handlePrevTrack}
-            handleNextTrack={handleNextTrack}
-            showSkipControls={state.queue.length > 1}
-            playerRef={playerRef}
-            resumeCallback={() => {
-              if (!state.isPlaying) resume();
-            }}
-            pauseCallback={() => {
-              if (state.isPlaying) pause();
-            }}
-            onListen={handleListen}
-            onLoadedMetaData={handleLoadedMetaData}
-            onVolumeChange={handleVolumeChange}
-            isPlaying={state.isPlaying}
-            currentTrack={state.currentTrack}
-            currentAlbum={state.currentAlbum}
-            handleClose={handleClose}
-          />
-
-          {/* Desktop player */}
-          <DesktopPlayerControls
-            audioUrl={audioUrl}
-            handlePrevTrack={handlePrevTrack}
-            handleNextTrack={handleNextTrack}
-            showSkipControls={state.queue.length > 1}
-            playerRef={playerRef}
-            resumeCallback={() => {
-              if (!state.isPlaying) resume();
-            }}
-            pauseCallback={() => {
-              if (state.isPlaying) pause();
-            }}
-            onListen={handleListen}
-            onLoadedMetaData={handleLoadedMetaData}
-            onVolumeChange={handleVolumeChange}
-            isPlaying={state.isPlaying}
-          />
-
-          {/* Queue indicator - Only visible on desktop */}
-          <div className="hidden md:flex items-center gap-4 text-light/70">
-            <span className="text-xs">{trackPosition}</span>
+            {/* Close button */}
+            <button
+              onClick={handleClose}
+              className="text-light/70 hover:text-light transition-colors rounded-full p-1 hover:bg-light/10"
+              aria-label="Close player"
+            >
+              <X size={22} />
+            </button>
           </div>
         </div>
       </div>
 
-      {/* Customized styling for the compact player */}
+      {/* Custom styles for slider */}
       <style jsx global>{`
-        .compact-player .rhap_container {
-          background-color: transparent;
-          box-shadow: none;
-          padding: 0;
+        .slider-thumb {
+          appearance: none;
+          height: 4px;
+          background: rgba(255, 255, 255, 0.1);
+          border-radius: 4px;
+          outline: none;
         }
 
-        .compact-player .rhap_controls-section {
-          margin: 0;
+        .slider-thumb::-webkit-slider-thumb {
+          appearance: none;
+          width: 12px;
+          height: 12px;
+          background: var(--primary, #e63946);
+          border-radius: 50%;
+          cursor: pointer;
+          box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
         }
 
-        .compact-player .rhap_main-controls-button {
-          color: var(--light, #ffffff);
-          font-size: 22px;
-        }
-
-        .compact-player .rhap_play-pause-button {
-          font-size: 28px;
-          width: 36px;
-          height: 36px;
-        }
-
-        .rhap_container {
-          background-color: rgba(30, 30, 30, 0.3);
-          box-shadow: none;
-        }
-
-        .rhap_progress-bar {
-          background-color: rgba(255, 255, 255, 0.2);
-        }
-
-        .rhap_progress-filled {
-          background-color: var(--primary, #e63946);
-        }
-
-        .rhap_progress-indicator {
-          background-color: var(--primary, #e63946);
-        }
-
-        .rhap_volume-button,
-        .rhap_main-controls-button,
-        .rhap_time {
-          color: var(--light, #ffffff);
-        }
-
-        .rhap_volume-indicator {
-          background-color: var(--accent, #4361ee);
-        }
-
-        .rhap_volume-bar {
-          background-color: rgba(255, 255, 255, 0.2);
-        }
-
-        /* Make the player more compact */
-        .rhap_progress-section {
-          margin-bottom: 4px;
-        }
-
-        /* Media query adjustments for mobile */
-        @media (max-width: 640px) {
-          .rhap_progress-section {
-            margin-bottom: 2px;
-          }
-
-          .rhap_controls-section {
-            margin-top: 0;
-          }
-
-          .rhap_controls-section .rhap_main-controls {
-            margin-right: 8px;
-          }
-
-          .rhap_controls-section .rhap_volume-controls {
-            justify-content: flex-end;
-          }
-
-          .rhap_time {
-            font-size: 12px;
-          }
+        .slider-thumb::-moz-range-thumb {
+          width: 12px;
+          height: 12px;
+          background: var(--primary, #e63946);
+          border-radius: 50%;
+          cursor: pointer;
+          border: none;
+          box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
         }
       `}</style>
     </div>
   );
+}
+
+// Helper function to format time in mm:ss
+function formatTime(seconds: number) {
+  if (isNaN(seconds)) return "0:00";
+  const mins = Math.floor(seconds / 60);
+  const secs = Math.floor(seconds % 60);
+  return `${mins}:${secs < 10 ? "0" + secs : secs}`;
 }
