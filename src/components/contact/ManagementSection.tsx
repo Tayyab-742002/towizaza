@@ -162,7 +162,7 @@ export default function ManagementSection() {
           </div>
 
           {/* Fan Mail Box */}
-          <motion.div
+          {/* <motion.div
             className="mt-8 sm:mt-10 p-4 sm:p-6 bg-gradient-to-br from-dark/60 to-dark/40 rounded-lg border border-light/10 backdrop-blur-md"
             variants={itemVariants}
           >
@@ -208,7 +208,7 @@ export default function ManagementSection() {
                 </svg>
               </button>
             </div>
-          </motion.div>
+          </motion.div> */}
         </div>
       </motion.div>
     </motion.section>

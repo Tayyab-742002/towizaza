@@ -33,7 +33,7 @@ export async function POST(request: NextRequest) {
       // from: process.env.EMAIL_FROM || "Orders <orders@yourdomain.com>",
       from: "Orders <orders@resend.dev>",
       // to: [customerInfo.email],
-      to: ["eviorxd@gmail.com"],
+      to: process.env.ADMIN_EMAIL! || "towizaza352@gmail.com",
       subject: `Order Confirmation #${orderId}`,
       react: EmailTemplate({
         orderId,

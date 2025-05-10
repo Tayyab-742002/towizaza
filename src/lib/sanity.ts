@@ -9,6 +9,7 @@ const queryCache = new Map<string, { data: any; timestamp: number }>();
 // Cache expiration time: 5 minutes in ms (adjust as needed)
 const CACHE_EXPIRY = 5 * 60 * 1000;
 
+// Create a client that can be used in both server and client components
 export const client = createClient({
   projectId: process.env.NEXT_PUBLIC_SANITY_PROJECT_ID!,
   dataset: process.env.NEXT_PUBLIC_SANITY_DATASET || "production",
@@ -16,6 +17,10 @@ export const client = createClient({
   useCdn: true, // Always use CDN for better performance
   perspective: "published",
   token: process.env.SANITY_API_TOKEN!,
+  stega: {
+    enabled: false,
+    studioUrl: "/studio",
+  },
 });
 
 // Create an image URL builder

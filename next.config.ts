@@ -41,6 +41,12 @@ const nextConfig: NextConfig = {
       }
     }
 
+    // Add this to handle the nanoid module
+    config.resolve.alias = {
+      ...config.resolve.alias,
+      nanoid: require.resolve("nanoid"),
+    };
+
     return config;
   },
 
