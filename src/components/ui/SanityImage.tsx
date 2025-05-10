@@ -2,8 +2,8 @@
 
 import { useState } from "react";
 import Image from "next/image";
-import { urlForImage } from "@/sanity/lib/image";
 import { cn } from "@/lib/utils";
+import { urlFor } from "@/lib/sanity";
 
 interface SanityImageProps {
   image: any;
@@ -41,7 +41,7 @@ export function SanityImage({
     );
   }
 
-  const imageUrl = urlForImage(image)
+  const imageUrl = urlFor(image)
     ?.width(width)
     ?.height(height)
     ?.quality(quality)
