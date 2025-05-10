@@ -151,7 +151,7 @@ export default function HeroSection({ artistInfo }: HeroSectionProps) {
       </div>
       <motion.div
         variants={fadeInUp}
-        className="absolute bottom-8 left-0 right-0 flex justify-center z-50"
+        className="absolute bottom-8 left-0 right-0 flex justify-center "
       >
         <ScrollIndicator color="#ffffff" glowIntensity={10} />
       </motion.div>{" "}

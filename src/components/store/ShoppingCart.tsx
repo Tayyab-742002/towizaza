@@ -271,7 +271,7 @@ export default function ShoppingCart() {
 
       {/* Cart panel */}
       <motion.div
-        className="fixed top-0 right-0 h-screen w-full sm:w-[450px] bg-gradient-to-b from-dark/95 to-dark/90 z-50 shadow-xl flex flex-col"
+        className="fixed top-0 right-0 h-screen w-full sm:w-[450px] bg-gradient-to-b from-dark/95 to-dark/90 z-[1000] shadow-xl flex flex-col"
         variants={cartVariants}
         initial="hidden"
         animate="visible"
