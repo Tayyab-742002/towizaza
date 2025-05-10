@@ -14,6 +14,7 @@
     "@sanity/vision": "^3.87.1",
     "@stripe/stripe-js": "^7.3.0",
     "@tailwindcss/forms": "^0.5.10",
+    "@types/howler": "^2.2.12",
     "clsx": "^2.1.1",
     "dotenv": "^16.5.0",
     "framer-motion": "^12.9.4",
@@ -25,6 +26,7 @@
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "react-h5-audio-player": "^3.10.0-rc.1",
+    "react-howler": "^5.2.0",
     "react-icons": "^5.5.0",
     "react-intersection-observer": "^9.16.0",
     "react-toastify": "^11.0.5",
@@ -40,6 +42,7 @@
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "@types/react-howler": "^5.2.3",
     "tailwindcss": "^4",
     "typescript": "^5"
   }

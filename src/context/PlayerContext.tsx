@@ -22,6 +22,7 @@ interface PlayerState {
   isVisible: boolean;
   queue: Track[];
   lastPlaybackTime: number;
+  isLoading: boolean;
 }
 
 type PlayerAction =
@@ -37,7 +38,8 @@ type PlayerAction =
   | { type: "SET_QUEUE"; payload: { tracks: Track[] } }
   | { type: "NEXT_TRACK" }
   | { type: "PREV_TRACK" }
-  | { type: "SAVE_PLAYBACK_TIME"; payload: { time: number } };
+  | { type: "SAVE_PLAYBACK_TIME"; payload: { time: number } }
+  | { type: "SET_LOADING"; payload: { isLoading: boolean } };
 
 interface PlayerContextType {
   state: PlayerState;
@@ -68,6 +70,7 @@ const initialState: PlayerState = {
   isVisible: false,
   queue: [],
   lastPlaybackTime: 0,
+  isLoading: false,
 };
 
 function playerReducer(state: PlayerState, action: PlayerAction): PlayerState {
@@ -79,20 +82,22 @@ function playerReducer(state: PlayerState, action: PlayerAction): PlayerState {
         currentAlbum: action.payload.album || null,
         isPlaying: true,
         progress: 0,
-        isVisible: true, // Always show player when playing a track
+        isVisible: true,
+        isLoading: true,
       };
 
     case "PAUSE":
       return {
         ...state,
         isPlaying: false,
+        isLoading: false,
       };
 
     case "RESUME":
       return {
         ...state,
         isPlaying: true,
-        isVisible: true, // Ensure player is visible when resuming
+        isVisible: true,
       };
 
     case "SET_PROGRESS":
@@ -137,6 +142,12 @@ function playerReducer(state: PlayerState, action: PlayerAction): PlayerState {
         queue: action.payload.tracks,
       };
 
+    case "SET_LOADING":
+      return {
+        ...state,
+        isLoading: action.payload.isLoading,
+      };
+
     case "SAVE_PLAYBACK_TIME":
       return {
         ...state,
@@ -170,8 +181,9 @@ function playerReducer(state: PlayerState, action: PlayerAction): PlayerState {
         ...state,
         currentTrack: nextTrack,
         progress: 0,
-        isPlaying: true, // Auto-play next track
-        isVisible: true, // Ensure player is visible
+        isPlaying: true,
+        isVisible: true,
+        isLoading: true,
       };
     }
 
@@ -202,7 +214,7 @@ function playerReducer(state: PlayerState, action: PlayerAction): PlayerState {
       ) {
         return {
           ...state,
-          progress: 0, // Just restart the current track
+          progress: 0,
         };
       }
 
@@ -214,8 +226,9 @@ function playerReducer(state: PlayerState, action: PlayerAction): PlayerState {
         ...state,
         currentTrack: prevTrack,
         progress: 0,
-        isPlaying: true, // Auto-play previous track
-        isVisible: true, // Ensure player is visible
+        isPlaying: true,
+        isVisible: true,
+        isLoading: true,
       };
     }
 
@@ -285,9 +298,37 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   // Initialize state with saved values where available but only on the client
   const [savedStateLoaded, setSavedStateLoaded] = useState(false);
   const [state, dispatch] = useReducer(playerReducer, initialState);
-
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const playerMounted = useRef<boolean>(false);
+  // Add a ref to track the active audio element
+  const activeAudioRef = useRef<HTMLAudioElement | null>(null);
+  // Add a ref to track the last track change timestamp
+  const lastTrackChangeRef = useRef<number>(0);
+  // Add a ref to prevent rapid track changes
+  const isChangingTrackRef = useRef<boolean>(false);
+  // Add a timeout ref for debouncing track changes
+  const trackChangeTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Function to safely stop and clean up any audio element
+  const cleanupAudio = (audio: HTMLAudioElement | null) => {
+    if (!audio) return;
+
+    try {
+      // First pause the audio
+      audio.pause();
+
+      // Reset it
+      audio.currentTime = 0;
+
+      // Remove the source to fully release resources
+      if (audio.src) {
+        audio.src = "";
+        audio.load(); // Forces the release of resources
+      }
+    } catch (error) {
+      console.error("Error cleaning up audio:", error);
+    }
+  };
 
   // Load saved state from localStorage only on client side
   useEffect(() => {
@@ -402,18 +443,99 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     // When the currentTrack changes, make sure we reset our state appropriately
     if (state.currentTrack) {
-      // Use setTimeout to ensure console.log doesn't happen during render
-      // This prevents console logging during the render cycle
+      // Cleanup any existing audio instance
+      if (
+        activeAudioRef.current &&
+        activeAudioRef.current !== audioRef.current
+      ) {
+        cleanupAudio(activeAudioRef.current);
+      }
+
+      // Update the active audio reference
+      activeAudioRef.current = audioRef.current;
+
+      // Log the track change (outside the render cycle)
       setTimeout(() => {
-        // The audio element from react-h5-audio-player will handle the actual audio
-        // Our audioRef is just for tracking state now
         console.log("Track changed:", state.currentTrack?.title);
       }, 0);
-    }
-  }, [state.currentTrack]);
 
-  // Player actions
+      // Set a timeout to automatically clear loading state if it persists too long
+      const timeoutId = setTimeout(() => {
+        if (state.isLoading) {
+          console.log(
+            "Loading timeout reached, forcing loading state to false"
+          );
+          dispatch({ type: "SET_LOADING", payload: { isLoading: false } });
+        }
+      }, 8000); // 8 seconds timeout for loading
+
+      return () => {
+        clearTimeout(timeoutId);
+      };
+    }
+  }, [state.currentTrack, state.isLoading]);
+
+  // Clear loading state when isPlaying changes to false or when playback actually starts
+  useEffect(() => {
+    // If track is playing and still in loading state, clear the loading state
+    if (
+      state.isPlaying &&
+      state.isLoading &&
+      audioRef.current &&
+      !audioRef.current.paused
+    ) {
+      console.log("Playback detected, clearing loading state");
+      dispatch({ type: "SET_LOADING", payload: { isLoading: false } });
+    }
+
+    // If explicitly paused, ensure loading state is cleared
+    if (!state.isPlaying && state.isLoading) {
+      console.log("Pause detected, clearing loading state");
+      dispatch({ type: "SET_LOADING", payload: { isLoading: false } });
+    }
+  }, [state.isPlaying, state.isLoading, audioRef.current?.paused]);
+
+  // Player actions with debounce protection
   const play = (track: Track, album?: Album) => {
+    const now = Date.now();
+
+    // Don't interrupt current playback if trying to play the same track
+    if (state.currentTrack && track) {
+      const isSameTrack =
+        (track.id &&
+          state.currentTrack.id &&
+          track.id === state.currentTrack.id) ||
+        (track._key &&
+          state.currentTrack._key &&
+          track._key === state.currentTrack._key) ||
+        (track.title === state.currentTrack.title &&
+          getAudioUrl(track) === getAudioUrl(state.currentTrack));
+
+      if (isSameTrack) {
+        // If the same track is already playing, just resume it
+        if (!state.isPlaying) {
+          console.log("Resuming same track:", track.title);
+          dispatch({ type: "RESUME" });
+        }
+        return;
+      }
+    }
+
+    // Prevent rapid track changes (debounce)
+    if (isChangingTrackRef.current || now - lastTrackChangeRef.current < 300) {
+      console.log("Debouncing rapid track change");
+      return;
+    }
+
+    // Set changing flag
+    isChangingTrackRef.current = true;
+    lastTrackChangeRef.current = now;
+
+    // Stop any currently playing audio before starting a new one
+    if (activeAudioRef.current) {
+      cleanupAudio(activeAudioRef.current);
+    }
+
     console.log("Play track:", track.title);
     dispatch({ type: "PLAY", payload: { track, album } });
 
@@ -421,24 +543,58 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     if (album && album.tracks && album.tracks.length > 0) {
       const playableTracks = album.tracks.filter((t) => !!getAudioUrl(t));
       dispatch({ type: "SET_QUEUE", payload: { tracks: playableTracks } });
+    } else if (
+      !state.queue.length ||
+      !state.queue.some(
+        (t) =>
+          (t.id && track.id && t.id === track.id) ||
+          (t._key && track._key && t._key === track._key)
+      )
+    ) {
+      // If no album and track not in queue, add it as single track in queue
+      dispatch({ type: "SET_QUEUE", payload: { tracks: [track] } });
     }
+
+    // Clear changing flag after a delay
+    if (trackChangeTimeoutRef.current) {
+      clearTimeout(trackChangeTimeoutRef.current);
+    }
+
+    trackChangeTimeoutRef.current = setTimeout(() => {
+      isChangingTrackRef.current = false;
+
+      // If loading is still true after this delay, there's likely an issue - force clear it
+      if (state.isLoading) {
+        dispatch({ type: "SET_LOADING", payload: { isLoading: false } });
+      }
+    }, 3000); // 3 seconds timeout for track change
   };
 
   const pause = () => {
     console.log("Pause");
+    if (activeAudioRef.current) {
+      activeAudioRef.current.pause();
+    }
     dispatch({ type: "PAUSE" });
   };
 
   const resume = () => {
     console.log("Resume");
-    dispatch({ type: "RESUME" });
+    // Only resume if we're not already changing tracks
+    if (!isChangingTrackRef.current) {
+      dispatch({ type: "RESUME" });
+    }
   };
 
   const seek = (progress: number) => {
     console.log("Seek to:", progress);
     if (audioRef.current) {
-      audioRef.current.currentTime = progress;
-      dispatch({ type: "SET_PROGRESS", payload: { progress } });
+      try {
+        audioRef.current.currentTime = progress;
+        dispatch({ type: "SET_PROGRESS", payload: { progress } });
+      } catch (error) {
+        console.error("Error seeking:", error);
+      }
     }
   };
 
@@ -465,10 +621,22 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   };
 
   const nextTrack = () => {
+    // Don't allow next track if we're still loading or changing tracks
+    if (isChangingTrackRef.current || state.isLoading) {
+      console.log("Ignoring nextTrack while changing tracks");
+      return;
+    }
+
     dispatch({ type: "NEXT_TRACK" });
   };
 
   const prevTrack = () => {
+    // Don't allow prev track if we're still loading or changing tracks
+    if (isChangingTrackRef.current || state.isLoading) {
+      console.log("Ignoring prevTrack while changing tracks");
+      return;
+    }
+
     dispatch({ type: "PREV_TRACK" });
   };
 
