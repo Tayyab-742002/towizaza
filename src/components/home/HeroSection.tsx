@@ -17,23 +17,28 @@ interface HeroSectionProps {
 }
 
 export default function HeroSection({ artistInfo }: HeroSectionProps) {
+  console.log(artistInfo);
   // Animation variants for staggered animations
   const fadeInUp = {
     hidden: { opacity: 0, y: 20 },
     visible: { opacity: 1, y: 0, transition: { duration: 0.6 } },
   };
-
+  const getImageUrl = (image: any) => {
+    if (!image) {
+      return "/images/fallback-hero-image.jpg";
+    }
+    if (typeof image === "string") {
+      return image;
+    }
+    return urlFor(image).url();
+  };
   return (
     <section className="relative h-screen flex items-center justify-center overflow-hidden">
       {/* Hero Background */}
       <div className="absolute inset-0 z-0">
         {artistInfo?.heroImage ? (
           <Image
-            src={
-              typeof artistInfo.heroImage === "string"
-                ? artistInfo.heroImage
-                : urlFor(artistInfo.heroImage).url()
-            }
+            src={getImageUrl(artistInfo.heroImage)}
             alt="Towizaza"
             fill
             priority

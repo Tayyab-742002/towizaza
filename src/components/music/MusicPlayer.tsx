@@ -273,7 +273,7 @@ const DesktopPlayerControls = ({
   isPlaying,
 }: PlayerControlsProps) => {
   return (
-    <div className="hidden sm:block w-full sm:flex-1 sm:max-w-2xl">
+    <div className="hidden sm:block w-full sm:flex-1 sm:max-w-2xl z-999">
       <AudioPlayer
         ref={playerRef}
         src={audioUrl}
@@ -524,7 +524,7 @@ export default function MusicPlayer() {
     currentIndex !== -1 ? `${currentIndex + 1} of ${state.queue.length}` : "";
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 bg-dark/90 backdrop-blur-md border-t border-light/10 transition-all duration-300 z-40">
+    <div className="fixed bottom-0 left-0 right-0 bg-dark/90 backdrop-blur-md border-t border-light/10 transition-all duration-300 z-999">
       <div className="container mx-auto px-2 sm:px-4 py-2 sm:py-3 flex justify-center">
         <div className="flex flex-col sm:flex-row items-center gap-2 sm:gap-3 w-full max-w-5xl">
           {/* Album artwork for desktop */}
