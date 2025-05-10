@@ -300,7 +300,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
             type: "PLAY",
             payload: {
               track: savedState.currentTrack,
-              album: savedState.currentAlbum,
+              album: savedState.currentAlbum || undefined,
             },
           });
           if (!savedState.isPlaying) {
@@ -407,7 +407,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       setTimeout(() => {
         // The audio element from react-h5-audio-player will handle the actual audio
         // Our audioRef is just for tracking state now
-        console.log("Track changed:", state.currentTrack.title);
+        console.log("Track changed:", state.currentTrack?.title);
       }, 0);
     }
   }, [state.currentTrack]);
