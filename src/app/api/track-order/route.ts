@@ -5,7 +5,8 @@ export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const checkoutId = searchParams.get("checkoutId");
   const orderId = searchParams.get("orderId");
-
+  console.log("orderId", orderId);
+  console.log("checkoutId", checkoutId);
   // Set cache control headers
   const headers = {
     "Cache-Control": "no-store, must-revalidate",
@@ -15,18 +16,17 @@ export async function GET(request: Request) {
 
   if (!checkoutId || !orderId) {
     return NextResponse.json(
-      { error: "Missing required parameters: checkoutId and orderId" },
-      { status: 400, headers }
+      { error: "Internal server error" },
+      { status: 500, headers }
     );
   }
 
   try {
     // Fetch the order from Sanity using both orderId and checkoutId
     const order = await client.fetch(
-      `*[_type == "order" && stripeCheckoutId == $checkoutId && _id == $orderId][0]`,
+      `*[_type == "order" && stripeCheckoutId == $checkoutId && orderId == $orderId]`,
       { checkoutId, orderId }
     );
-
     if (!order) {
       return NextResponse.json(
         { error: "Order not found" },
@@ -37,19 +37,8 @@ export async function GET(request: Request) {
     // Return order details with cache control headers
     return NextResponse.json(
       {
-        orderId: order._id,
-        checkoutId: order.stripeCheckoutId,
-        customerName: order.customerInfo?.name,
-        customerEmail: order.customerInfo?.email,
-        items: order.items,
-        subtotal: order.subtotal,
-        shippingCost: order.shippingCost,
-        tax: order.tax,
-        total: order.total,
-        currency: order.currency,
-        shippingAddress: order.shippingAddress,
-        status: order.status,
-        createdAt: order._createdAt,
+        message: "Order fetched successfully",
+        data: order,
       },
       { headers }
     );

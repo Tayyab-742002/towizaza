@@ -15,6 +15,8 @@ const TrackOrderContent = () => {
       try {
         const checkoutId = searchParams.get("checkoutId");
         const orderId = searchParams.get("orderId");
+        console.log("checkoutId", checkoutId);
+        console.log("orderId", orderId);
 
         if (!checkoutId) {
           setError("Missing checkout ID in the URL");
@@ -26,9 +28,11 @@ const TrackOrderContent = () => {
         setError("");
         setOrder(null);
 
-        const res = await fetch(`/api/track-order?checkoutId=${checkoutId}`);
+        const res = await fetch(
+          `/api/track-order?checkoutId=${checkoutId}&orderId=${orderId}`
+        );
         const result = await res.json();
-
+        console.log("result", result);
         if (!res.ok) {
           throw new Error(result.error || "Failed to fetch order");
         }
@@ -47,7 +51,7 @@ const TrackOrderContent = () => {
     };
 
     fetchOrder();
-  }, [searchParams]);
+  }, []);
 
   if (loading) {
     return (
