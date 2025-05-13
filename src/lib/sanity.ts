@@ -14,7 +14,7 @@ export const client = createClient({
   projectId: process.env.NEXT_PUBLIC_SANITY_PROJECT_ID!,
   dataset: process.env.NEXT_PUBLIC_SANITY_DATASET || "production",
   apiVersion: "2024-04-16", // Use today's date or the latest API version
-  useCdn: true, // Always use CDN for better performance
+  useCdn: false, // Always use CDN for better performance
   perspective: "published",
   token: process.env.SANITY_API_TOKEN!,
   stega: {
@@ -303,8 +303,10 @@ export async function createOrder(order: any) {
 }
 
 export async function updateOrder(orderId: string, updates: any) {
+  console.log("🔐🔐🔐🔐UPDATED DATA : ", updates);
   try {
     const result = await client.patch(orderId).set(updates).commit();
+
     return result;
   } catch (error) {
     console.error("Error updating order:", error);
@@ -343,3 +345,47 @@ export async function getOrderByOrderId(orderId: string) {
     throw error;
   }
 }
+
+// process full payment
+
+export const processSuccessfulPayment = async (
+  paymentIntentId: any,
+  orderId: any
+) => {
+  try {
+    console.log("🛫🛫🛫🛫🛫🛫INSIDE SUCCESSFULLPAYMENT PROCESS METHOD");
+
+    // update the status of the order
+    const order = await getOrderByOrderId(orderId);
+    console.log("ORDER : ", order);
+    if (!order) {
+      return null;
+    }
+    const result = await updateOrder(order._id, {
+      ...order,
+      status: "Paid",
+      paymentIntentId: paymentIntentId,
+    });
+    console.log("RESULT : ", result);
+    return result;
+  } catch (error) {
+    console.error("Error processing payment ", error);
+    throw error;
+  }
+};
+
+// process failed payment
+
+export const processFailedPayment = async (orderId: string) => {
+  try {
+    const order = getOrderByOrderId(orderId);
+    if (!order) {
+      return null;
+    }
+    const result = await client.delete(orderId);
+    return result;
+  } catch (error) {
+    console.error("Error processing payment ", error);
+    throw error;
+  }
+};

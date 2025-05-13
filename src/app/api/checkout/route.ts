@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { stripe } from "@/lib/stripe";
 import { nanoid } from "nanoid";
 import { createOrder, updateOrder } from "@/lib/sanity";
+import stripe from "@/lib/stripe";
 
 // Define interfaces for request data
 interface CustomerAddress {
@@ -113,6 +113,7 @@ export async function POST(req: NextRequest) {
       total: subtotal,
       currency: "USD",
     };
+
     const sanityOrder = await createOrder(orderData);
 
     // Create a Stripe Customer
@@ -213,7 +214,7 @@ export async function POST(req: NextRequest) {
       await updateOrder(sanityOrder._id, {
         stripeCheckoutId: session.id,
         stripePaymentIntentId: session.payment_intent,
-        status: "paid",
+        status: "unpaid",
         customerInfo: {
           name: customerInfo.name,
           email: customerInfo.email,
@@ -257,32 +258,32 @@ export async function POST(req: NextRequest) {
       });
     }
     // after this we need to send the order confirmation email to the customer
-    await fetch(`${process.env.NEXT_PUBLIC_SITE_URL}/api/order-confirmation`, {
-      method: "POST",
-      body: JSON.stringify({
-        orderId,
-        customerInfo,
-        items: cartItems,
-        subtotal,
-        shippingCost: session.total_details?.amount_shipping
-          ? session.total_details?.amount_shipping / 100
-          : 0,
-        tax: session.total_details?.amount_tax
-          ? session.total_details?.amount_tax / 100
-          : 0,
-        total: session.amount_total ? session.amount_total / 100 : 0,
-        currency: session.currency,
-        checkoutId: session.id,
-        shippingAddress: {
-          line1: customerInfo.address.line1,
-          line2: customerInfo.address.line1,
-          city: customerInfo.address.city,
-          state: customerInfo.address.state,
-          postalCode: customerInfo.address.postalCode,
-          country: customerInfo.address.country,
-        },
-      }),
-    });
+    // await fetch(`${process.env.NEXT_PUBLIC_SITE_URL}/api/order-confirmation`, {
+    //   method: "POST",
+    //   body: JSON.stringify({
+    //     orderId,
+    //     customerInfo,
+    //     items: cartItems,
+    //     subtotal,
+    //     shippingCost: session.total_details?.amount_shipping
+    //       ? session.total_details?.amount_shipping / 100
+    //       : 0,
+    //     tax: session.total_details?.amount_tax
+    //       ? session.total_details?.amount_tax / 100
+    //       : 0,
+    //     total: session.amount_total ? session.amount_total / 100 : 0,
+    //     currency: session.currency,
+    //     checkoutId: session.id,
+    //     shippingAddress: {
+    //       line1: customerInfo.address.line1,
+    //       line2: customerInfo.address.line1,
+    //       city: customerInfo.address.city,
+    //       state: customerInfo.address.state,
+    //       postalCode: customerInfo.address.postalCode,
+    //       country: customerInfo.address.country,
+    //     },
+    //   }),
+    // });
     return NextResponse.json({ url: session.url, orderId });
   } catch (error: any) {
     console.error("Error creating checkout session:", error);
