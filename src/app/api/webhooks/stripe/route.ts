@@ -107,20 +107,20 @@ async function handleCheckoutSessionCompleted(
   session: Stripe.Checkout.Session
 ) {
   // For checkout sessions, we need to extract order information and process accordingly
-  console.log("🔴🔴🔴🔴🔴🔴🔴TRIGGERED CHECKOUT SESSION");
+  // console.log("🔴🔴🔴🔴🔴🔴🔴TRIGGERED CHECKOUT SESSION");
 
   // If the session has a payment_intent, we can retrieve that
   if (session.payment_intent && typeof session.payment_intent === "string") {
-    console.log("🟢🟢🟢🟢🟢🟢🟢INSIDE IF ELSE");
+    // console.log("🟢🟢🟢🟢🟢🟢🟢INSIDE IF ELSE");
     try {
-      console.log("🟢🟢🟢🟢🟢🟢🟢INSIDE TRY CATCH");
+      // console.log("🟢🟢🟢🟢🟢🟢🟢INSIDE TRY CATCH");
       const paymentIntent = await stripe.paymentIntents.retrieve(
         session.payment_intent
       );
-      console.log("PAYMENT INTENT : ", paymentIntent);
+      // console.log("PAYMENT INTENT : ", paymentIntent);
       const orderId =
         paymentIntent.metadata.orderId || session.metadata?.orderId;
-      console.log("ORDER ID : ", orderId);
+      // console.log("ORDER ID : ", orderId);
       if (orderId) {
         const result = await processSuccessfulPayment(
           paymentIntent.id,

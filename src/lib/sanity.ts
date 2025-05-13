@@ -303,7 +303,7 @@ export async function createOrder(order: any) {
 }
 
 export async function updateOrder(orderId: string, updates: any) {
-  console.log("🔐🔐🔐🔐UPDATED DATA : ", updates);
+  // console.log("🔐🔐🔐🔐UPDATED DATA : ", updates);
   try {
     const result = await client.patch(orderId).set(updates).commit();
 
@@ -353,11 +353,11 @@ export const processSuccessfulPayment = async (
   orderId: any
 ) => {
   try {
-    console.log("🛫🛫🛫🛫🛫🛫INSIDE SUCCESSFULLPAYMENT PROCESS METHOD");
+    // console.log("🛫🛫🛫🛫🛫🛫INSIDE SUCCESSFULLPAYMENT PROCESS METHOD");
 
     // update the status of the order
     const order = await getOrderByOrderId(orderId);
-    console.log("ORDER : ", order);
+    // console.log("ORDER : ", order);
     if (!order) {
       return null;
     }
@@ -366,7 +366,7 @@ export const processSuccessfulPayment = async (
       status: "Paid",
       paymentIntentId: paymentIntentId,
     });
-    console.log("RESULT : ", result);
+    // console.log("RESULT : ", result);
     return result;
   } catch (error) {
     console.error("Error processing payment ", error);
